@@ -1,0 +1,10 @@
+{
+  "description": "This web application offers a user-friendly interface in Vietnamese, designed to streamline tasks and enhance productivity for local users.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

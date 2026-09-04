@@ -1,0 +1,82 @@
+.statCard {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.statLabel {
+  font-size: 11px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cardHeading {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 4px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.attentionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 20px;
+  cursor: pointer;
+}
+
+.activityTimeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.activityDotCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding-top: 3px;
+}
+
+.activityLine {
+  width: 1px;
+  flex: 1;
+  margin-top: 4px;
+  min-height: 18px;
+}
+
+.sectionLinkBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}

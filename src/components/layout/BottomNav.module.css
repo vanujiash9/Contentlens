@@ -1,0 +1,96 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+  z-index: 40;
+}
+
+.menuSheet {
+  position: fixed;
+  bottom: 64px;
+  left: 12px;
+  right: 12px;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.menuUser {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menuAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 99px;
+  background: #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.menuAvatarInitial {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.menuUserName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.menuUserEmail {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.menuLogout {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 14px;
+  color: #dc2626;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  height: 64px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.navBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 48px;
+}

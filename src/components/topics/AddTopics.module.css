@@ -1,0 +1,113 @@
+.wrapper {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.backBtn {
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 0;
+  margin-bottom: 18px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.textareaCard {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.textarea {
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  color: #111827;
+  font-family: JetBrains Mono, monospace;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1.7;
+}
+
+.textareaFooter {
+  padding: 9px 14px;
+  border-top: 1px solid #f3f4f6;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.previewChip {
+  font-size: 11px;
+  padding: 2px 7px;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 3px;
+}
+
+.exampleBox {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #f3f4f6;
+}
+
+.exampleLabel {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.examplePre {
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: JetBrains Mono, monospace;
+  margin: 0;
+  line-height: 1.7;
+}
+
+.useExampleBtn {
+  font-size: 12px;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 5px 0 0;
+  display: block;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cancelBtn {
+  padding: 10px 18px;
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
