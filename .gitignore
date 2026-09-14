@@ -21,8 +21,16 @@ logs/
 
 # Local agent/tooling artifacts
 /.claude/
+/.figma/
 /.playwright-mcp/
 /.specify/
 /docs/
+/.mcp.json
+/.mise.toml
+/AGENTS.md
 *mcp*/
 contentlens-*.png
+
+# Backend/config artifacts kept out of this frontend-only public repo
+/supabase/
+/utils/supabase/
