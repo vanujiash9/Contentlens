@@ -1,46 +1,51 @@
-import { colors } from "../../styles/tokens";
+import s from "./Card.module.css"
 
 interface CardProps {
-  children: React.ReactNode;
-  padding?: string;
-  style?: React.CSSProperties;
-  onClick?: () => void;
+  children: React.ReactNode
+  padding?: string
+  style?: React.CSSProperties
+  onClick?: () => void
 }
 
-export function Card({ children, padding = "16px 20px", style, onClick }: CardProps) {
+export function Card({
+  children,
+  padding = "18px 22px",
+  style,
+  onClick,
+}: CardProps) {
   return (
     <div
+      className={`${s.card} ${onClick ? s.interactive : ""}`}
       onClick={onClick}
-      style={{
-        background: colors.surface.card,
-        border: `1px solid ${colors.border}`,
-        borderRadius: 8,
-        padding,
-        cursor: onClick ? "pointer" : undefined,
-        transition: onClick ? "box-shadow 0.15s" : undefined,
-        ...style,
-      }}
-      onMouseEnter={onClick ? (e) => (e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)") : undefined}
-      onMouseLeave={onClick ? (e) => (e.currentTarget.style.boxShadow = "none") : undefined}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
+      style={{ padding, ...style }}
     >
       {children}
     </div>
-  );
+  )
 }
 
 interface CardHeaderProps {
-  title: string;
-  action?: React.ReactNode;
+  title: string
+  action?: React.ReactNode
 }
 
 export function CardHeader({ title, action }: CardHeaderProps) {
   return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      marginBottom: 16,
-    }}>
-      <h2 style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: 0 }}>{title}</h2>
+    <div className={s.header}>
+      <h2 className={s.title}>{title}</h2>
       {action}
     </div>
-  );
+  )
 }

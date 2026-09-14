@@ -1,19 +1,16 @@
-import s from "./BottomNav.module.css";
+import s from "./BottomNav.module.css"
 
 interface BottomNavProps {
-  activeView: string;
-  onNavigate: (view: string) => void;
-  onLogout: () => void;
+  activeView: string
+  onNavigate: (view: string) => void
+  onLogout: () => void
 }
-
-const ACTIVE = "#2563eb";
-const INACTIVE = "#9ca3af";
 
 const navItems = [
   {
     id: "overview",
     label: "Tổng quan",
-    icon: (active: boolean) => (
+    icon: () => (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <rect
           x="2"
@@ -21,7 +18,7 @@ const navItems = [
           width="7"
           height="7"
           rx="1.5"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
         />
         <rect
@@ -30,7 +27,7 @@ const navItems = [
           width="7"
           height="7"
           rx="1.5"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
         />
         <rect
@@ -39,7 +36,7 @@ const navItems = [
           width="7"
           height="7"
           rx="1.5"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
         />
         <rect
@@ -48,7 +45,7 @@ const navItems = [
           width="7"
           height="7"
           rx="1.5"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
         />
       </svg>
@@ -58,14 +55,14 @@ const navItems = [
   {
     id: "topics",
     label: "Chủ đề",
-    icon: (active: boolean) => (
+    icon: () => (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <line
           x1="6"
           y1="5"
           x2="17"
           y2="5"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -74,7 +71,7 @@ const navItems = [
           y1="10"
           x2="17"
           y2="10"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -83,29 +80,14 @@ const navItems = [
           y1="15"
           x2="17"
           y2="15"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
 
-        <circle
-          cx="3"
-          cy="5"
-          r="1.2"
-          fill={active ? ACTIVE : INACTIVE}
-        />
-        <circle
-          cx="3"
-          cy="10"
-          r="1.2"
-          fill={active ? ACTIVE : INACTIVE}
-        />
-        <circle
-          cx="3"
-          cy="15"
-          r="1.2"
-          fill={active ? ACTIVE : INACTIVE}
-        />
+        <circle cx="3" cy="5" r="1.2" fill="currentColor" />
+        <circle cx="3" cy="10" r="1.2" fill="currentColor" />
+        <circle cx="3" cy="15" r="1.2" fill="currentColor" />
       </svg>
     ),
   },
@@ -142,7 +124,7 @@ const navItems = [
   {
     id: "briefs",
     label: "Nội dung",
-    icon: (active: boolean) => (
+    icon: () => (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <rect
           x="4"
@@ -150,7 +132,7 @@ const navItems = [
           width="12"
           height="15"
           rx="2"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
         />
 
@@ -159,7 +141,7 @@ const navItems = [
           y1="7"
           x2="13"
           y2="7"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -169,7 +151,7 @@ const navItems = [
           y1="10.5"
           x2="13"
           y2="10.5"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -179,7 +161,7 @@ const navItems = [
           y1="14"
           x2="11"
           y2="14"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -190,11 +172,11 @@ const navItems = [
   {
     id: "discovery",
     label: "Gợi ý",
-    icon: (active: boolean) => (
+    icon: () => (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <path
           d="M10 2.5a5.2 5.2 0 0 0-3.2 9.3c.7.55 1.2 1.2 1.35 2h3.7c.15-.8.65-1.45 1.35-2A5.2 5.2 0 0 0 10 2.5Z"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -202,44 +184,41 @@ const navItems = [
 
         <path
           d="M8.2 16h3.6"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
 
         <path
           d="M8.8 18h2.4"
-          stroke={active ? ACTIVE : INACTIVE}
+          stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
       </svg>
     ),
   },
-];
+]
 
-export default function BottomNav({
-  activeView,
-  onNavigate,
-}: BottomNavProps) {
-  const isTopicDetail = activeView.startsWith("topic-");
+export default function BottomNav({ activeView, onNavigate }: BottomNavProps) {
+  const isTopicDetail = activeView.startsWith("topic-")
 
   const isActive = (id: string) => {
     /*
      * TopicDetail vẫn thuộc khu vực "Chủ đề".
      */
     if (id === "topics") {
-      return activeView === "topics" || isTopicDetail;
+      return activeView === "topics" || isTopicDetail
     }
 
-    return activeView === id;
-  };
+    return activeView === id
+  }
 
   return (
     <nav className={s.nav}>
       {navItems.map((item) => {
-        const active = isActive(item.id);
-        const isAdd = item.id === "add-topics";
+        const active = isActive(item.id)
+        const isAdd = item.id === "add-topics"
 
         return (
           <button
@@ -254,16 +233,14 @@ export default function BottomNav({
 
             {!isAdd && (
               <span
-                className={`${s.navLabel} ${
-                  active ? s.navLabelActive : ""
-                }`}
+                className={`${s.navLabel} ${active ? s.navLabelActive : ""}`}
               >
                 {item.label}
               </span>
             )}
           </button>
-        );
+        )
       })}
     </nav>
-  );
+  )
 }

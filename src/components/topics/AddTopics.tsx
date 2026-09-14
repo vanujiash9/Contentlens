@@ -36,8 +36,8 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
 
   return (
     <PageShell
-      title="Thêm chủ đề"
-      subtitle="Nhập nhanh, xong là đi tiếp."
+      title="Thêm chủ đề nghiên cứu"
+      subtitle="Nhập một hoặc nhiều ý tưởng nội dung để đưa vào hàng đợi AI research."
       maxWidth={layout.formWidth}
     >
       <div className={s.pageWrap}>
@@ -46,7 +46,7 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
             <button type="button" onClick={onBack} className={s.backBtn}>
               ← Quay lại
             </button>
-            <p className={s.pageHint}>Mỗi dòng là một chủ đề. Tối đa {MAX_TOPICS} chủ đề.</p>
+            <p className={s.pageHint}>Mỗi dòng là một chủ đề · tối đa {MAX_TOPICS} chủ đề.</p>
           </div>
 
           <div className={s.section}>
@@ -55,7 +55,7 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
               <div>
                 <h2 className={s.sectionTitle}>Nhập chủ đề</h2>
                 <p className={s.sectionDescription}>
-                  Bạn có thể nhập tối đa {MAX_TOPICS} chủ đề cùng lúc.
+                  Chủ đề càng cụ thể, kết quả nghiên cứu và content brief càng hữu ích.
                 </p>
               </div>
             </div>
@@ -88,7 +88,7 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
                 <div>
                   <h2 className={s.sectionTitle}>Xem trước</h2>
                   <p className={s.sectionDescription}>
-                    Các chủ đề sẽ được thêm vào hàng đợi nghiên cứu.
+                    Kiểm tra nhanh danh sách trước khi thêm vào hàng đợi.
                   </p>
                 </div>
               </div>
@@ -108,7 +108,8 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
               </div>
             ) : (
               <div className={s.emptyPreview}>
-                Danh sách chủ đề sẽ xuất hiện ở đây sau khi bạn nhập.
+                <strong>Chưa có chủ đề nào</strong>
+                <span>Nhập mỗi chủ đề trên một dòng để xem preview trước khi thêm vào queue.</span>
               </div>
             )}
           </div>

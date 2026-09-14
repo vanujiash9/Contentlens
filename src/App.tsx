@@ -1,23 +1,18 @@
-import { useState } from "react";
-import Login from "./components/login/Login";
-import Sidebar from "./components/layout/Sidebar";
-import BottomNav from "./components/layout/BottomNav";
-import Overview from "./components/overview/Overview";
-import TopicsQueue from "./components/topics/TopicsQueue";
-import TopicDetail from "./components/topics/TopicDetail";
-import AddTopics from "./components/topics/AddTopics";
-import ContentBriefs from "./components/briefs/ContentBriefs";
-import TopicDiscovery from "./components/discovery/TopicDiscovery";
-import { useIsMobile } from "./hooks/useIsMobile";
-import { type Topic, type DiscoveredTopic } from "./data/mockData";
+import { useState } from "react"
+import Login from "./components/login/Login"
+import s from "./App.module.css"
+import Sidebar from "./components/layout/Sidebar"
+import BottomNav from "./components/layout/BottomNav"
+import Overview from "./components/overview/Overview"
+import TopicsQueue from "./components/topics/TopicsQueue"
+import TopicDetail from "./components/topics/TopicDetail"
+import AddTopics from "./components/topics/AddTopics"
+import ContentBriefs from "./components/briefs/ContentBriefs"
+import TopicDiscovery from "./components/discovery/TopicDiscovery"
+import { useIsMobile } from "./hooks/useIsMobile"
+import { type Topic, type DiscoveredTopic } from "./data/mockData"
 
-type View =
-  | "overview"
-  | "topics"
-  | "briefs"
-  | "add-topics"
-  | "discovery"
-  | `topic-${string}`;
+type View = "overview" | "topics" | "briefs" | "add-topics" | "discovery" | `topic-${string}`
 
 function discoveredToTopic(d: DiscoveredTopic): Topic {
   return {
@@ -29,156 +24,92 @@ function discoveredToTopic(d: DiscoveredTopic): Topic {
     priority: d.priority,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  }
 }
 
 function TopBar({ onLogout }: { onLogout: () => void }) {
-  const [hov, setHov] = useState(false);
-
   return (
-    <div
-      style={{
-        height: 50,
-        background: "#fff",
-        borderBottom: "1px solid #e5e7eb",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        padding: "0 28px",
-        gap: 8,
-        flexShrink: 0,
-      }}
-    >
-      {/* Notification */}
-      <button
-        aria-label="Thông báo"
-        style={{
-          background: "transparent",
-          borderWidth: 0,
-          cursor: "pointer",
-          padding: 6,
-          borderRadius: 6,
-          color: "#9ca3af",
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
+    <div className={s.topBar}>
+      <button className={s.iconButton} aria-label="Thông báo" type="button">
         <svg
           width="18"
           height="18"
           viewBox="0 0 18 18"
           fill="none"
+          aria-hidden="true"
         >
           <path
             d="M9 2A5 5 0 004 7v4l-1.5 2h13L14 11V7A5 5 0 009 2z"
             stroke="currentColor"
-            strokeWidth="1.3"
+            strokeWidth="1.35"
             strokeLinejoin="round"
           />
           <path
             d="M7.5 13.5a1.5 1.5 0 003 0"
             stroke="currentColor"
-            strokeWidth="1.3"
+            strokeWidth="1.35"
             strokeLinecap="round"
           />
         </svg>
       </button>
 
-      {/* User / logout */}
       <button
+        className={s.accountButton}
         onClick={onLogout}
-        onMouseEnter={() => setHov(true)}
-        onMouseLeave={() => setHov(false)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          background: hov ? "#f3f4f6" : "transparent",
-          borderWidth: 0,
-          cursor: "pointer",
-          padding: "4px 8px 4px 4px",
-          borderRadius: 8,
-          transition: "background 0.12s",
-        }}
+        type="button"
+        aria-label="Mở tài khoản / đăng xuất"
       >
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 99,
-            background: "#1e293b",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            N
-          </span>
-        </div>
-
+        <span className={s.avatar}>N</span>
         <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
           fill="none"
+          aria-hidden="true"
         >
           <path
-            d="M2 3.5l3 3 3-3"
-            stroke="#9ca3af"
-            strokeWidth="1.3"
+            d="M3 4.5l3 3 3-3"
+            stroke="currentColor"
+            strokeWidth="1.4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
       </button>
     </div>
-  );
+  )
 }
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [view, setView] = useState<View>("overview");
-  const [discoveryQueue, setDiscoveryQueue] = useState<Topic[]>([]);
+  const [loggedIn, setLoggedIn] = useState(false)
+  const [view, setView] = useState<View>("overview")
+  const [discoveryQueue, setDiscoveryQueue] = useState<Topic[]>([])
 
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile()
 
   if (!loggedIn) {
-    return <Login onLogin={() => setLoggedIn(true)} />;
+    return <Login onLogin={() => setLoggedIn(true)} />
   }
 
   const navigate = (v: string) => {
-    setView(v as View);
-  };
+    setView(v as View)
+  }
 
   const handleAddFromDiscovery = (discovered: DiscoveredTopic) => {
-    const topic = discoveredToTopic(discovered);
+    const topic = discoveredToTopic(discovered)
 
     setDiscoveryQueue((prev) =>
-      prev.some((t) => t.id === topic.id)
-        ? prev
-        : [...prev, topic]
-    );
-  };
+      prev.some((t) => t.id === topic.id) ? prev : [...prev, topic],
+    )
+  }
 
   const renderContent = () => {
     if (view === "overview") {
-      return <Overview onNavigate={navigate} />;
+      return <Overview onNavigate={navigate} />
     }
 
     if (view === "topics") {
-      return (
-        <TopicsQueue
-          onNavigate={navigate}
-          extraTopics={discoveryQueue}
-        />
-      );
+      return <TopicsQueue onNavigate={navigate} extraTopics={discoveryQueue} />
     }
 
     if (view === "add-topics") {
@@ -187,11 +118,11 @@ export default function App() {
           onBack={() => navigate("topics")}
           onAdd={() => navigate("topics")}
         />
-      );
+      )
     }
 
     if (view === "briefs") {
-      return <ContentBriefs onNavigate={navigate} />;
+      return <ContentBriefs onNavigate={navigate} />
     }
 
     if (view === "discovery") {
@@ -200,7 +131,7 @@ export default function App() {
           onNavigate={navigate}
           onAddToQueue={handleAddFromDiscovery}
         />
-      );
+      )
     }
 
     if (view.startsWith("topic-")) {
@@ -209,21 +140,14 @@ export default function App() {
           topicId={view.replace("topic-", "")}
           onNavigate={navigate}
         />
-      );
+      )
     }
 
-    return null;
-  };
+    return null
+  }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100%",
-        background: "#f5f6f8",
-        fontFamily: "Inter, sans-serif",
-      }}
-    >
+    <div className={s.app}>
       {/* Desktop sidebar */}
       {!isMobile && (
         <Sidebar
@@ -234,32 +158,12 @@ export default function App() {
       )}
 
       {/* Main app */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          overflow: "hidden",
-        }}
-      >
+      <div className={s.mainArea}>
         {/* Desktop topbar only */}
-        {!isMobile && (
-          <TopBar onLogout={() => setLoggedIn(false)} />
-        )}
+        {!isMobile && <TopBar onLogout={() => setLoggedIn(false)} />}
 
         {/* Page content */}
-        <main
-          style={{
-            flex: 1,
-            overflow: "auto",
-
-            // Chừa chỗ cho fixed BottomNav trên mobile
-            paddingBottom: isMobile ? 76 : 0,
-          }}
-        >
-          {renderContent()}
-        </main>
+        <main className={s.content}>{renderContent()}</main>
       </div>
 
       {/* Mobile navigation */}
@@ -271,5 +175,5 @@ export default function App() {
         />
       )}
     </div>
-  );
+  )
 }
