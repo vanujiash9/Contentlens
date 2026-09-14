@@ -7,7 +7,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
+  padding: 16px 24px 0;
 }
 
 .backBtn {
@@ -43,6 +44,9 @@
 }
 
 .formCard {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: calc(100vh - 220px);
   overflow: hidden;
   background: var(--surface-card);
   border: 1px solid var(--border);
@@ -50,8 +54,19 @@
   box-shadow: var(--shadow-xs);
 }
 
+.sectionsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  min-height: 0;
+}
+
 .section {
-  padding: 22px 24px;
+  min-width: 0;
+  padding: 24px 28px;
+}
+
+.section + .section {
+  border-left: 1px solid var(--border-subtle);
 }
 
 .sectionHeader {
@@ -96,18 +111,18 @@
 .textarea {
   display: block;
   width: 100%;
-  min-height: 210px;
+  min-height: 300px;
   box-sizing: border-box;
-  margin-top: 18px;
-  padding: 18px 20px;
+  margin-top: 22px;
+  padding: 22px 24px;
   resize: vertical;
-  border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
   outline: none;
-  background: var(--surface-raised);
+  background: #ffffff;
   color: var(--text-strong);
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.72;
   transition:
     border-color var(--duration-fast) var(--ease-out),
     box-shadow var(--duration-fast) var(--ease-out),
@@ -121,7 +136,7 @@
 .textarea:focus {
   border-color: var(--primary);
   background: #ffffff;
-  box-shadow: var(--focus-ring);
+  box-shadow: 0 0 0 3px rgba(31, 78, 216, 0.12);
 }
 
 .inputMeta {
@@ -133,11 +148,6 @@
   color: var(--text-faint);
   font-size: 11px;
   font-weight: 600;
-}
-
-.divider {
-  height: 1px;
-  background: var(--border-subtle);
 }
 
 .previewHeader {
@@ -206,7 +216,8 @@
 .emptyPreview {
   display: grid;
   gap: 5px;
-  padding: 34px 20px;
+  min-height: 104px;
+  padding: 30px 20px;
   border: 1px dashed var(--border-strong);
   border-radius: 14px;
   background: var(--surface-subtle);
@@ -311,11 +322,25 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 7px;
-    margin-bottom: 12px;
+    padding: 14px 16px 0;
+  }
+
+  .formCard {
+    display: block;
+    min-height: 0;
+  }
+
+  .sectionsGrid {
+    display: block;
   }
 
   .section {
-    padding: 18px 16px;
+    padding: 20px 16px;
+  }
+
+  .section + .section {
+    border-top: 1px solid var(--border-subtle);
+    border-left: 0;
   }
 
   .sectionHeader {
@@ -327,8 +352,9 @@
   }
 
   .textarea {
-    min-height: 178px;
-    padding: 15px 16px;
+    min-height: 210px;
+    margin-top: 18px;
+    padding: 18px 16px;
     font-size: 14px;
   }
 

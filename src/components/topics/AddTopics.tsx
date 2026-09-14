@@ -37,8 +37,8 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
   return (
     <PageShell
       title="Thêm chủ đề nghiên cứu"
-      subtitle="Nhập một hoặc nhiều ý tưởng nội dung để đưa vào hàng đợi AI research."
-      maxWidth={layout.formWidth}
+      subtitle="Nhập một hoặc nhiều ý tưởng nội dung để đưa vào hàng đợi nghiên cứu."
+      maxWidth={layout.contentWidth}
     >
       <div className={s.pageWrap}>
         <section className={s.formCard}>
@@ -49,69 +49,69 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
             <p className={s.pageHint}>Mỗi dòng là một chủ đề · tối đa {MAX_TOPICS} chủ đề.</p>
           </div>
 
-          <div className={s.section}>
-            <div className={s.sectionHeader}>
-              <span className={s.stepNumber}>1</span>
-              <div>
-                <h2 className={s.sectionTitle}>Nhập chủ đề</h2>
-                <p className={s.sectionDescription}>
-                  Chủ đề càng cụ thể, kết quả nghiên cứu và content brief càng hữu ích.
-                </p>
-              </div>
-            </div>
-
-            <textarea
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-              placeholder={"Nhập chủ đề, mỗi dòng một chủ đề...\n\nYamaha U3\nKawai K300\nBest piano for beginners"}
-              rows={isMobile ? 8 : 9}
-              className={s.textarea}
-              autoFocus
-            />
-
-            <div className={s.inputMeta}>
-              <span>
-                {lines.length > 0
-                  ? `${lines.length} chủ đề đã nhập`
-                  : "Mỗi dòng được tính là một chủ đề"}
-              </span>
-              <span>{lines.length}/{MAX_TOPICS} dòng</span>
-            </div>
-          </div>
-
-          <div className={s.divider} />
-
-          <div className={s.section}>
-            <div className={s.previewHeader}>
+          <div className={s.sectionsGrid}>
+            <div className={s.section}>
               <div className={s.sectionHeader}>
-                <span className={s.stepNumber}>2</span>
+                <span className={s.stepNumber}>1</span>
                 <div>
-                  <h2 className={s.sectionTitle}>Xem trước</h2>
+                  <h2 className={s.sectionTitle}>Nhập chủ đề</h2>
                   <p className={s.sectionDescription}>
-                    Kiểm tra nhanh danh sách trước khi thêm vào hàng đợi.
+                    Chủ đề càng cụ thể, kết quả nghiên cứu và content brief càng hữu ích.
                   </p>
                 </div>
               </div>
-              {lines.length > 0 && (
-                <span className={s.topicCount}>{lines.length} chủ đề</span>
-              )}
+
+              <textarea
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                placeholder={"Nhập chủ đề, mỗi dòng một chủ đề...\n\nYamaha U3\nKawai K300\nBest piano for beginners"}
+                rows={isMobile ? 8 : 9}
+                className={s.textarea}
+                autoFocus
+              />
+
+              <div className={s.inputMeta}>
+                <span>
+                  {lines.length > 0
+                    ? `${lines.length} chủ đề đã nhập`
+                    : "Mỗi dòng được tính là một chủ đề"}
+                </span>
+                <span>{lines.length}/{MAX_TOPICS} dòng</span>
+              </div>
             </div>
 
-            {lines.length > 0 ? (
-              <div className={s.previewList}>
-                {lines.map((topic, index) => (
-                  <div className={s.previewRow} key={`${topic}-${index}`}>
-                    <span className={s.rowNumber}>{index + 1}</span>
-                    <span className={s.topicName}>{topic}</span>
+            <div className={s.section}>
+              <div className={s.previewHeader}>
+                <div className={s.sectionHeader}>
+                  <span className={s.stepNumber}>2</span>
+                  <div>
+                    <h2 className={s.sectionTitle}>Xem trước</h2>
+                    <p className={s.sectionDescription}>
+                      Kiểm tra nhanh danh sách trước khi thêm vào hàng đợi.
+                    </p>
                   </div>
-                ))}
+                </div>
+                {lines.length > 0 && (
+                  <span className={s.topicCount}>{lines.length} chủ đề</span>
+                )}
               </div>
-            ) : (
-              <div className={s.emptyPreview}>
-                <strong>Chưa có chủ đề nào</strong>
-                <span>Nhập mỗi chủ đề trên một dòng để xem preview trước khi thêm vào queue.</span>
-              </div>
-            )}
+
+              {lines.length > 0 ? (
+                <div className={s.previewList}>
+                  {lines.map((topic, index) => (
+                    <div className={s.previewRow} key={`${topic}-${index}`}>
+                      <span className={s.rowNumber}>{index + 1}</span>
+                      <span className={s.topicName}>{topic}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={s.emptyPreview}>
+                  <strong>Chưa có chủ đề nào</strong>
+                  <span>Nhập mỗi chủ đề trên một dòng để xem preview trước khi thêm vào queue.</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={s.cardFooter}>
