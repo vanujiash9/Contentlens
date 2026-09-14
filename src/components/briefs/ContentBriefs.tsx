@@ -1,7 +1,8 @@
 import { useState } from "react";
+import PageShell from "../ui/PageShell";
 import { MOCK_TOPICS, type Topic } from "../../data/mockData";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { layout, spacing } from "../../styles/tokens";
+import { layout } from "../../styles/tokens";
 import s from "./ContentBriefs.module.css";
 
 interface ContentBriefsProps {
@@ -86,6 +87,7 @@ function RenderMd({ text }: { text: string }) {
 }
 
 function BriefViewer({ topic, onClose, onStatusChange, existingApprovedAt }: { topic: Topic; onClose: () => void; onStatusChange?: (id: string, status: ReviewStatus, at?: string) => void; existingApprovedAt?: string }) {
+
   const isMobile = useIsMobile();
   const brief = topic.brief!;
   const [reviewState, setReviewState] = useState<"idle" | "approved" | "requesting">(() => existingApprovedAt ? "approved" : "idle");
@@ -102,12 +104,13 @@ function BriefViewer({ topic, onClose, onStatusChange, existingApprovedAt }: { t
   };
 
   return (
-    <div className={s.viewerWrapper} style={{ padding: isMobile ? "16px" : "24px 32px" }}>
+    <div className={s.viewerWrapper} style={{ padding: isMobile ? "16px" : "24px 32px", maxWidth: layout.viewerWidth }}>
+
       <button onClick={onClose} className={s.viewerBackBtn}>← Quay lại Content Brief</button>
       <h1 className={s.viewerTitle} style={{ fontSize: isMobile ? 18 : 20 }}>{brief.title}</h1>
 
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr", gap: 16 }}>
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "18px 22px", marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, minmax(0, 1fr))", gap: 20 }}>
           {[
             { label: "Search Intent", value: brief.searchIntent },
             { label: "Đối tượng", value: brief.targetAudience },
@@ -122,7 +125,7 @@ function BriefViewer({ topic, onClose, onStatusChange, existingApprovedAt }: { t
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: 12, marginBottom: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.5fr) minmax(300px, 0.9fr)", gap: 14, marginBottom: 14 }}>
         <div className={s.sectionCard}>
           <h3 className={s.sectionTitle}>Outline bài viết</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
@@ -164,25 +167,76 @@ function BriefViewer({ topic, onClose, onStatusChange, existingApprovedAt }: { t
       </div>
 
       <div style={{ background: "#fff", border: `1px solid ${isEditingDraft ? "#2563eb" : "#e5e7eb"}`, borderRadius: 8, overflow: "hidden", marginBottom: 14, transition: "border-color 0.15s" }}>
-        <div style={{ padding: "10px 16px", borderBottom: `1px solid ${isEditingDraft ? "#dbeafe" : "#f3f4f6"}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: isEditingDraft ? "#eff6ff" : "#fafafa" }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: isEditingDraft ? "#2563eb" : "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>{isEditingDraft ? "Đang chỉnh sửa" : "Content Draft"}</span>
+        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${isEditingDraft ? "#dbeafe" : "#f3f4f6"}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: isEditingDraft ? "#eff6ff" : "#fafafa" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: isEditingDraft ? "#2563eb" : "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            {isEditingDraft ? "Đang chỉnh sửa" : "Content Draft"}
+          </span>
           <div style={{ display: "flex", gap: 6 }}>
             {isEditingDraft ? (
               <>
-                <button onClick={() => { setSavedDraft(draftText); setIsEditingDraft(false); }} style={{ padding: "4px 12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Lưu</button>
-                <button onClick={() => { setDraftText(savedDraft); setIsEditingDraft(false); }} style={{ padding: "4px 10px", background: "transparent", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 5, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>Huỷ</button>
+                <button
+                  onClick={() => {
+                    setSavedDraft(draftText);
+                    setIsEditingDraft(false);
+                  }}
+                  style={{ padding: "4px 12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Lưu
+                </button>
+                <button
+                  onClick={() => {
+                    setDraftText(savedDraft);
+                    setIsEditingDraft(false);
+                  }}
+                  style={{ padding: "4px 10px", background: "transparent", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 5, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Huỷ
+                </button>
               </>
             ) : (
-              <button onClick={() => setIsEditingDraft(true)} style={{ padding: "4px 10px", background: "transparent", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 5, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>Sửa tay</button>
+              <button
+                onClick={() => setIsEditingDraft(true)}
+                style={{ padding: "4px 10px", background: "transparent", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 5, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Sửa tay
+              </button>
             )}
           </div>
         </div>
-        {isEditingDraft ? <textarea value={draftText} onChange={(e) => setDraftText(e.target.value)} style={{ width: "100%", minHeight: 420, padding: "20px 24px", border: "none", outline: "none", resize: "vertical", fontSize: 13, color: "#374151", fontFamily: "inherit", lineHeight: 1.75, background: "#fff", boxSizing: "border-box" }} /> : <div style={{ padding: "20px 24px", maxHeight: 480, overflowY: "auto" }}><RenderMd text={draftText} /></div>}
+
+        {isEditingDraft ? (
+          <textarea
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            style={{ width: "100%", minHeight: 420, padding: "22px 26px", border: "none", outline: "none", resize: "vertical", fontSize: 13, color: "#374151", fontFamily: "inherit", lineHeight: 1.75, background: "#fff", boxSizing: "border-box" }}
+          />
+        ) : (
+          <div style={{ padding: "22px 26px", maxHeight: 480, overflowY: "auto" }}>
+            <RenderMd text={draftText} />
+          </div>
+        )}
       </div>
 
-      {reviewState === "idle" && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button onClick={handleApprove} style={{ padding: "9px 20px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>✓ Duyệt</button><button onClick={() => setReviewState("requesting")} style={{ padding: "9px 16px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Yêu cầu AI sửa</button><button onClick={() => setSavedDraft(draftText)} style={{ padding: "9px 16px", background: "#fff", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Lưu nháp</button></div>}
-      {reviewState === "requesting" && <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 18px" }}><div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 4 }}>Yêu cầu chỉnh sửa</div><div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>Mô tả bạn muốn AI sửa gì — có thể chỉ định section cụ thể.</div><textarea value={savedDraft} onChange={(e) => setSavedDraft(e.target.value)} rows={3} style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, color: "#374151", fontFamily: "inherit", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box", background: "#fafafa" }} /></div>}
-      {reviewState === "approved" && <div style={{ padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}><span style={{ fontSize: 13, color: "#16a34a", fontWeight: 500 }}>✓ Đã duyệt — Content sẵn sàng sử dụng</span>{approvedAt && <span style={{ fontSize: 11, color: "#9ca3af", fontFamily: "JetBrains Mono, monospace" }}>{new Date(approvedAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}</div>}
+      {reviewState === "idle" && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={handleApprove} style={{ padding: "9px 20px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>✓ Duyệt</button>
+          <button onClick={() => setReviewState("requesting")} style={{ padding: "9px 16px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Yêu cầu AI sửa</button>
+          <button onClick={() => setSavedDraft(draftText)} style={{ padding: "9px 16px", background: "#fff", color: "#6b7280", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Lưu nháp</button>
+        </div>
+      )}
+      {reviewState === "requesting" && (
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 18px" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 4 }}>Yêu cầu chỉnh sửa</div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>Mô tả bạn muốn AI sửa gì — có thể chỉ định section cụ thể.</div>
+          <textarea value={savedDraft} onChange={(e) => setSavedDraft(e.target.value)} rows={3} style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, color: "#374151", fontFamily: "inherit", lineHeight: 1.6, resize: "vertical", outline: "none", boxSizing: "border-box", background: "#fafafa" }} />
+        </div>
+      )}
+      {reviewState === "approved" && (
+        <div style={{ padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 500 }}>✓ Đã duyệt — Content sẵn sàng sử dụng</span>
+          {approvedAt && <span style={{ fontSize: 11, color: "#9ca3af", fontFamily: "JetBrains Mono, monospace" }}>{new Date(approvedAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+        </div>
+      )}
     </div>
   );
 }
@@ -204,7 +258,6 @@ export default function ContentBriefs({ onNavigate }: ContentBriefsProps) {
     return init;
   });
 
-  const P = isMobile ? spacing.pagePadding.mobile : spacing.pagePadding.desktop;
   const filtered = activeTab === "all" ? topicsWithBriefs : topicsWithBriefs.filter((t) => (reviewStatuses[t.id] ?? "pending_review") === activeTab);
 
   if (selectedId) {
@@ -219,12 +272,11 @@ export default function ContentBriefs({ onNavigate }: ContentBriefsProps) {
   ];
 
   return (
-    <div className={s.wrapper} style={{ padding: P, maxWidth: layout.contentWidth, margin: "0 auto" }}>
-      <div className={s.pageHeader} style={{ marginBottom: isMobile ? 18 : 24 }}>
-        <h1 className={s.pageTitle} style={{ fontSize: isMobile ? 18 : 22 }}>Content Brief</h1>
-        <p className={s.pageSubtitle}>{topicsWithBriefs.length} brief đã tạo · Output cuối cùng của AI research</p>
-      </div>
-
+    <PageShell
+      title="Content Brief"
+      subtitle={`${topicsWithBriefs.length} brief đã tạo · Output cuối cùng của AI research`}
+      maxWidth={layout.contentWidth}
+    >
       <div className={s.tabBar}>
         {tabs.map((tab) => {
           const count = tab.key === "all" ? topicsWithBriefs.length : topicsWithBriefs.filter((t) => (reviewStatuses[t.id] ?? "pending_review") === tab.key).length;
@@ -246,6 +298,6 @@ export default function ContentBriefs({ onNavigate }: ContentBriefsProps) {
       ) : (
         <div className={s.briefList}>{filtered.map((topic) => <BriefCard key={topic.id} topic={topic} reviewStatus={reviewStatuses[topic.id] ?? "pending_review"} approvedAt={approvalTimes[topic.id]} onOpen={() => setSelectedId(topic.id)} />)}</div>
       )}
-    </div>
+    </PageShell>
   );
 }

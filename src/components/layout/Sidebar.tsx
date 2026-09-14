@@ -1,6 +1,5 @@
 import { useState } from "react";
 import s from "./Sidebar.module.css";
-import { colors } from "../../styles/tokens";
 
 interface SidebarProps {
   activeView: string;
@@ -8,212 +7,314 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────
+type IconProps = {
+  size?: number;
+};
 
-function OverviewIcon() {
+/* =========================================================
+   ICONS
+   ========================================================= */
+
+function OverviewIcon({ size = 18 }: IconProps) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-      <rect x="1.5" y="1.5" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.3"/>
-      <rect x="8.5" y="1.5" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.3"/>
-      <rect x="1.5" y="8.5" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.3"/>
-      <rect x="8.5" y="8.5" width="5" height="5" rx="1.2" stroke="currentColor" strokeWidth="1.3"/>
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <rect x="2" y="2" width="5.5" height="5.5" rx="1.3" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="10.5" y="2" width="5.5" height="5.5" rx="1.3" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="2" y="10.5" width="5.5" height="5.5" rx="1.3" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1.3" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }
 
-function TopicsIcon() {
+function QueueIcon({ size = 18 }: IconProps) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-      <line x1="4" y1="3" x2="13" y2="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="4" y1="7.5" x2="13" y2="7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <line x1="4" y1="12" x2="10" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <circle cx="2" cy="3" r="0.9" fill="currentColor"/>
-      <circle cx="2" cy="7.5" r="0.9" fill="currentColor"/>
-      <circle cx="2" cy="12" r="0.9" fill="currentColor"/>
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="3.2" cy="4.5" r="1" fill="currentColor" />
+      <circle cx="3.2" cy="9" r="1" fill="currentColor" />
+      <circle cx="3.2" cy="13.5" r="1" fill="currentColor" />
+
+      <path d="M6 4.5H15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M6 9H15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M6 13.5H12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
 
-function OpportunityIcon() {
+function AddIcon({ size = 18 }: IconProps) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M7.5 1.5L9.1 5.4L13.2 5.8L10.3 8.4L11.2 12.5L7.5 10.4L3.8 12.5L4.7 8.4L1.8 5.8L5.9 5.4L7.5 1.5Z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round"/>
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M9 5.8V12.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M5.8 9H12.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
 
-function BriefIcon() {
+function DiscoveryIcon({ size = 18 }: IconProps) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M3 2.5C3 1.95 3.45 1.5 4 1.5H10.5L13 4V12.5C13 13.05 12.55 13.5 12 13.5H4C3.45 13.5 3 13.05 3 12.5V2.5Z" stroke="currentColor" strokeWidth="1.25"/>
-      <line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-      <line x1="5.5" y1="7.8" x2="10.5" y2="7.8" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-      <line x1="5.5" y1="10" x2="8.5" y2="10" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path
+        d="M9 2.4A5.2 5.2 0 0 0 5.8 11.7c.7.55 1.15 1.25 1.3 2.05h3.8c.15-.8.6-1.5 1.3-2.05A5.2 5.2 0 0 0 9 2.4Z"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M7.2 15.4H10.8" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
     </svg>
   );
 }
 
-function DiscoveryIcon() {
+function BriefIcon({ size = 18 }: IconProps) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-      <circle cx="6.5" cy="6.5" r="4.2" stroke="currentColor" strokeWidth="1.3"/>
-      <path d="M9.7 9.7L13.2 13.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-      <path d="M6.5 4.5v4M4.5 6.5h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path
+        d="M4 2.5H11.5L14.5 5.5V15C14.5 15.55 14.05 16 13.5 16H4.5C3.95 16 3.5 15.55 3.5 15V3.5C3.5 2.95 3.95 2.5 4.5 2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+      />
+      <path d="M11.5 2.8V5.5H14.2" stroke="currentColor" strokeWidth="1.35" />
+      <path d="M6.5 8H11.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M6.5 11H11.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M6.5 14H9.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
     </svg>
   );
 }
 
-function SourcesIcon() {
+function SettingsIcon({ size = 18 }: IconProps) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-      <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.3"/>
-      <ellipse cx="7.5" cy="7.5" rx="2.2" ry="5.5" stroke="currentColor" strokeWidth="1.1"/>
-      <line x1="2" y1="5" x2="13" y2="5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-      <line x1="2" y1="10" x2="13" y2="10" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.35" />
+      <path
+        d="M9 2V3.5M9 14.5V16M2 9H3.5M14.5 9H16"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4.05 4.05L5.1 5.1M12.9 12.9L13.95 13.95M4.05 13.95L5.1 12.9M12.9 5.1L13.95 4.05"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
-function SettingsIcon() {
+function LogoutIcon({ size = 18 }: IconProps) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0 }}>
-      <circle cx="7.5" cy="7.5" r="2" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3.1 3.1l1.06 1.06M10.84 10.84l1.06 1.06M3.1 11.9l1.06-1.06M10.84 4.16l1.06-1.06" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path
+        d="M7 3H4.5C3.95 3 3.5 3.45 3.5 4V14C3.5 14.55 3.95 15 4.5 15H7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 6L13 9L10 12"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M13 9H7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
 
-// ── Nav item ───────────────────────────────────────────────────────────────
+/* =========================================================
+   NAV ITEM
+   ========================================================= */
 
 function NavItem({
-  label, icon: Icon, isActive, onClick,
+  label,
+  icon: Icon,
+  active,
+  onClick,
 }: {
   label: string;
-  icon: () => React.ReactElement;
-  isActive: boolean;
+  icon: (props: IconProps) => React.ReactElement;
+  active?: boolean;
   onClick: () => void;
 }) {
-  const [hov, setHov] = useState(false);
   return (
     <button
+      type="button"
       onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        width: "100%",
-        padding: "8px 10px",
-        borderRadius: 7,
-        borderWidth: 0,
-        background: isActive
-          ? "rgba(255,255,255,0.09)"
-          : hov
-          ? "rgba(255,255,255,0.045)"
-          : "transparent",
-        color: isActive ? "#e8f0fb" : hov ? "#aabdd4" : "#5d7a96",
-        cursor: "pointer",
-        fontSize: 13,
-        fontWeight: isActive ? 500 : 400,
-        fontFamily: "inherit",
-        textAlign: "left",
-        letterSpacing: "0.005em",
-        transition: "background 0.12s, color 0.12s",
-      }}
+      className={`${s.navItem} ${active ? s.navItemActive : ""}`}
     >
-      <span style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 22,
-        height: 22,
-        borderRadius: 5,
-        background: isActive ? "rgba(255,255,255,0.1)" : "transparent",
-        flexShrink: 0,
-        transition: "background 0.12s",
-      }}>
+      <span className={s.navIcon}>
         <Icon />
       </span>
-      {label}
+
+      <span className={s.navLabel}>{label}</span>
     </button>
   );
 }
 
-// ── Sidebar ────────────────────────────────────────────────────────────────
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
 
-export default function Sidebar({ activeView, onNavigate, onLogout }: SidebarProps) {
+export default function Sidebar({
+  activeView,
+  onNavigate,
+  onLogout,
+}: SidebarProps) {
+  const [accountOpen, setAccountOpen] = useState(false);
+
   const isTopicDetail = activeView.startsWith("topic-");
 
-  const active = (id: string) => {
-    if (id === "research") return activeView === "topics" || isTopicDetail || activeView === "add-topics" || activeView === "discovery";
-    if (id === "content") return activeView === "briefs";
-    return activeView === id;
-  };
+  const queueActive =
+    activeView === "topics" ||
+    isTopicDetail;
+
+  const addActive = activeView === "add-topics";
+  const discoveryActive = activeView === "discovery";
+  const briefActive = activeView === "briefs";
 
   return (
     <aside className={s.aside}>
+      {/* Brand */}
+      <div className={s.brand}>
+        <div className={s.logo}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M9 2.5L15 5.8V12.2L9 15.5L3 12.2V5.8L9 2.5Z"
+              stroke="white"
+              strokeWidth="1.25"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M9 2.5V15.5M3 5.8L9 9L15 5.8"
+              stroke="white"
+              strokeWidth="1.15"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
 
-      {/* Logo */}
-      <div style={{ padding: "16px 12px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: "linear-gradient(145deg, #1e40af 0%, #2563eb 100%)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, boxShadow: "0 2px 10px rgba(37,99,235,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
-          }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 2.5L13.5 5.5V10.5L8 13.5L2.5 10.5V5.5L8 2.5Z" stroke="white" strokeWidth="1.2" strokeLinejoin="round" fill="rgba(255,255,255,0.1)"/>
-              <path d="M8 2.5V13.5M2.5 5.5L8 8.5L13.5 5.5" stroke="white" strokeWidth="1.1" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: "#dce8f8", lineHeight: 1.25, letterSpacing: "-0.025em" }}>
-              ContentLens
-            </div>
-            <div style={{ fontSize: 10, color: "#2e4a65", marginTop: 1, letterSpacing: "0.025em" }}>
-              Piano Research
-            </div>
-          </div>
+        <div className={s.brandText}>
+          <div className={s.brandName}>ContentLens</div>
+          <div className={s.brandSubtitle}>Piano Research</div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "10px 8px", display: "flex", flexDirection: "column", overflowY: "auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <NavItem label="Tổng quan"  icon={OverviewIcon}    isActive={active("overview")}  onClick={() => onNavigate("overview")} />
-          <NavItem label="Nghiên cứu" icon={TopicsIcon}      isActive={active("research")}  onClick={() => onNavigate("topics")} />
-          <NavItem label="Nội dung"   icon={BriefIcon}       isActive={active("content")}   onClick={() => onNavigate("briefs")} />
-        </div>
-        <div style={{ flex: 1 }} />
+      {/* Navigation */}
+      <nav className={s.navigation}>
+        <section className={s.navSection}>
+          <div className={s.sectionLabel}>TỔNG QUAN</div>
+
+          <NavItem
+            label="Tổng quan"
+            icon={OverviewIcon}
+            active={activeView === "overview"}
+            onClick={() => onNavigate("overview")}
+          />
+        </section>
+
+        <section className={s.navSection}>
+          <div className={s.sectionLabel}>NGHIÊN CỨU</div>
+
+          <NavItem
+            label="Hàng đợi chủ đề"
+            icon={QueueIcon}
+            active={queueActive}
+            onClick={() => onNavigate("topics")}
+          />
+
+          <NavItem
+            label="Thêm chủ đề"
+            icon={AddIcon}
+            active={addActive}
+            onClick={() => onNavigate("add-topics")}
+          />
+
+          <NavItem
+            label="Gợi ý chủ đề"
+            icon={DiscoveryIcon}
+            active={discoveryActive}
+            onClick={() => onNavigate("discovery")}
+          />
+        </section>
+
+        <section className={s.navSection}>
+          <div className={s.sectionLabel}>NỘI DUNG</div>
+
+          <NavItem
+            label="Content Brief"
+            icon={BriefIcon}
+            active={briefActive}
+            onClick={() => onNavigate("briefs")}
+          />
+        </section>
       </nav>
 
-      {/* Bottom: user + settings */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        {/* User display */}
-        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 10px 6px" }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-            background: "linear-gradient(145deg, #1e3a5f, #1a2d48)",
-            borderWidth: 1, borderStyle: "solid", borderColor: "rgba(255,255,255,0.1)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa" }}>N</span>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: "#cad9f0", lineHeight: 1.3 }}>Nguyễn</div>
-            <div style={{ fontSize: 10, color: "#2e4a65", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              Piano Studio
-            </div>
-          </div>
-        </div>
-        {/* Settings */}
-        <NavItem label="Cài đặt" icon={SettingsIcon} isActive={false} onClick={() => onNavigate("overview")} />
-        <div style={{ height: 6 }} />
-      </div>
+      {/* Account */}
+      <div className={s.footer}>
+        {accountOpen && (
+          <div className={s.accountMenu}>
+            <button
+              type="button"
+              className={s.accountMenuItem}
+              onClick={() => {
+                setAccountOpen(false);
+                onNavigate("overview");
+              }}
+            >
+              <SettingsIcon />
+              <span>Cài đặt</span>
+            </button>
 
+            <div className={s.accountDivider} />
+
+            <button
+              type="button"
+              className={`${s.accountMenuItem} ${s.logoutItem}`}
+              onClick={() => {
+                setAccountOpen(false);
+                onLogout();
+              }}
+            >
+              <LogoutIcon />
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className={`${s.account} ${accountOpen ? s.accountOpen : ""}`}
+          onClick={() => setAccountOpen((prev) => !prev)}
+          aria-expanded={accountOpen}
+        >
+          <div className={s.avatar}>N</div>
+
+          <div className={s.accountInfo}>
+            <div className={s.accountName}>Nguyễn</div>
+            <div className={s.accountSubtitle}>Piano Studio</div>
+          </div>
+
+          <svg
+            className={`${s.chevron} ${
+              accountOpen ? s.chevronOpen : ""
+            }`}
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+          >
+            <path
+              d="M4 5.5L7 8.5L10 5.5"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
     </aside>
   );
 }
-

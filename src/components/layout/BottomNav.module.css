@@ -1,96 +1,143 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.18);
-  z-index: 40;
-}
-
-.menuSheet {
-  position: fixed;
-  bottom: 64px;
-  left: 12px;
-  right: 12px;
-  z-index: 50;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.menuUser {
-  padding: 14px 16px;
-  border-bottom: 1px solid #f3f4f6;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.menuAvatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 99px;
-  background: #dbeafe;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.menuAvatarInitial {
-  font-size: 14px;
-  font-weight: 700;
-  color: #2563eb;
-}
-
-.menuUserName {
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.menuUserEmail {
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-.menuLogout {
-  display: block;
-  width: 100%;
-  padding: 12px 16px;
-  background: none;
-  border: none;
-  text-align: left;
-  font-size: 14px;
-  color: #dc2626;
-  cursor: pointer;
-  font-family: inherit;
-}
-
 .nav {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   z-index: 30;
+
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+
+  height: calc(64px + env(safe-area-inset-bottom));
+  padding: 0 6px env(safe-area-inset-bottom);
+
   background: #ffffff;
   border-top: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  height: 64px;
-  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
 }
 
 .navBtn {
-  flex: 1;
+  position: relative;
+
+  min-width: 0;
+  height: 64px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6px 0;
-  background: none;
-  border: none;
-  cursor: pointer;
+  gap: 4px;
+
+  padding: 5px 2px;
+
+  background: transparent;
+  border: 0;
+
   font-family: inherit;
-  min-height: 48px;
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.navBtn:active {
+  background: #f9fafb;
+}
+
+.navBtn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -4px;
+  border-radius: 8px;
+}
+
+.navLabel {
+  display: block;
+
+  max-width: 100%;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #9ca3af;
+
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.2;
+
+  text-align: center;
+}
+
+.navLabelActive {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+
+/* =========================
+   CENTER ADD BUTTON
+   ========================= */
+
+.addNavBtn {
+  overflow: visible;
+}
+
+.addNavBtn:active {
+  background: transparent;
+}
+
+.addButton {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: #2563eb;
+
+  box-shadow:
+    0 2px 4px rgba(37, 99, 235, 0.18),
+    0 6px 14px rgba(37, 99, 235, 0.16);
+}
+
+.addNavBtn:active .addButton {
+  transform: scale(0.96);
+}
+
+
+/* =========================
+   SAFE AREA
+   ========================= */
+
+@supports (padding: max(0px)) {
+  .nav {
+    height: calc(64px + max(env(safe-area-inset-bottom), 0px));
+
+    padding-bottom:
+      max(env(safe-area-inset-bottom), 0px);
+  }
+}
+
+
+/* =========================
+   VERY SMALL MOBILE
+   ========================= */
+
+@media (max-width: 360px) {
+  .nav {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .navLabel {
+    font-size: 9px;
+  }
+
+  .addButton {
+    width: 42px;
+    height: 42px;
+  }
 }

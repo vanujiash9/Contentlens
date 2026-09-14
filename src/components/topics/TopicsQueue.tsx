@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { MOCK_TOPICS, RESEARCH_STEPS, type Topic } from "../../data/mockData";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import PageShell from "../ui/PageShell";
-import { fontSize, fontWeight, colors } from "../../styles/tokens";
+import { colors, fontSize, fontWeight } from "../../styles/tokens";
 import s from "./TopicsQueue.module.css";
 
 interface TopicsQueueProps {
@@ -169,11 +169,6 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
                   >
                     {topic.title}
                   </div>
-                  {topic.source === "ai" && (
-                    <span style={{ display: "inline-block", marginTop: 3, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, padding: "1px 5px", borderRadius: 3, background: colors.status.purpleBg, color: colors.status.purple }}>
-                      AI đề xuất
-                    </span>
-                  )}
                 </div>
                 {topic.opportunityScore !== undefined && (
                   <span style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.brand.blue, fontFamily: "JetBrains Mono, monospace", flexShrink: 0 }}>
@@ -215,7 +210,7 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
         /* Desktop: table */
         <div className={s.tableContainer}>
           <div className={s.tableHeader}>
-            {["Chủ đề", "Trạng thái", "Tiến độ", "Cơ hội", "Hành động"].map((h) => (
+            {["Chủ đề", "Trạng thái", "Tiến độ", "Cơ hội", "Ngày tạo", "Hành động"].map((h) => (
               <div key={h} className={s.tableHeaderCell} style={{ color: colors.text.faint }}>{h}</div>
             ))}
           </div>
@@ -224,7 +219,7 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
           ) : filtered.map((topic, i) => (
             <div
               key={topic.id}
-              style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 90px 130px", padding: "13px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${colors.borderSubtle}` : "none", alignItems: "center", gap: 12 }}
+              style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 90px 120px 110px", padding: "13px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${colors.borderSubtle}` : "none", alignItems: "center", gap: 12 }}
             >
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
@@ -236,11 +231,6 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
                   >
                     {topic.title}
                   </span>
-                  {topic.source === "ai" && (
-                    <span style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, padding: "1px 5px", borderRadius: 3, background: colors.status.purpleBg, color: colors.status.purple, flexShrink: 0 }}>
-                      AI
-                    </span>
-                  )}
                 </div>
                 {topic.status === "processing" && topic.currentStep && (
                   <div style={{ fontSize: fontSize.xs, color: colors.status.warning, marginTop: 2 }}>↻ {topic.currentStep}</div>
@@ -264,9 +254,12 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
               <div>
                 {topic.opportunityScore !== undefined ? (
                   <span style={{ fontSize: fontSize.base, fontWeight: fontWeight.bold, color: topic.opportunityScore >= 80 ? colors.brand.blue : topic.opportunityScore >= 60 ? colors.status.warning : colors.text.faint, fontFamily: "JetBrains Mono, monospace" }}>
-                    {topic.opportunityScore}<span style={{ fontSize: fontSize.xs, fontWeight: fontWeight.regular, color: colors.text.disabled }}>/100</span>
+                    {topic.opportunityScore}<span style={{ fontSize: fontSize.base, fontWeight: fontWeight.regular, color: colors.text.disabled }}>/100</span>
                   </span>
                 ) : <span style={{ color: colors.text.disabled, fontSize: fontSize.sm }}>—</span>}
+              </div>
+              <div style={{ fontSize: fontSize.sm, color: colors.text.muted, whiteSpace: "nowrap" }}>
+                {new Date(topic.createdAt).toLocaleDateString("vi-VN")}
               </div>
               <div style={{ display: "flex", gap: 5 }}>
                 {topic.status === "completed" && <button onClick={() => onNavigate(`topic-${topic.id}`)} style={actionBtn(colors.brand.blueBg, colors.brand.blue, colors.brand.blueBorder)}>Xem</button>}

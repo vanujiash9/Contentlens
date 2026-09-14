@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import PageShell from "../ui/PageShell";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { spacing } from "../../styles/tokens";
+import { layout } from "../../styles/tokens";
 import s from "./AddTopics.module.css";
 
 interface AddTopicsProps {
@@ -8,85 +9,138 @@ interface AddTopicsProps {
   onAdd: (topics: string[]) => void;
 }
 
-const EXAMPLE = "Yamaha U3\nKawai K300\nYamaha U1 vs Yamaha U3\nBest piano for beginners";
+const MAX_TOPICS = 50;
 
 export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
   const isMobile = useIsMobile();
   const [value, setValue] = useState("");
   const [added, setAdded] = useState(false);
 
-  const lines = value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = useMemo(
+    () =>
+      value
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, MAX_TOPICS),
+    [value],
+  );
 
   const handleSubmit = () => {
-    if (!lines.length) return;
+    if (!lines.length || added) return;
+
     onAdd(lines);
     setAdded(true);
-    setTimeout(() => onBack(), 1200);
+    window.setTimeout(onBack, 1200);
   };
 
-  const P = isMobile ? spacing.pagePadding.mobile : spacing.pagePadding.desktop;
-
   return (
-    <div className={s.wrapper} style={{ padding: P }}>
-      <button onClick={onBack} className={s.backBtn}>← Quay lại</button>
+    <PageShell
+      title="Thêm chủ đề"
+      subtitle="Nhập nhanh, xong là đi tiếp."
+      maxWidth={layout.formWidth}
+    >
+      <div className={s.pageWrap}>
+        <section className={s.formCard}>
+          <div className={s.pageMeta}>
+            <button type="button" onClick={onBack} className={s.backBtn}>
+              ← Quay lại
+            </button>
+            <p className={s.pageHint}>Mỗi dòng là một chủ đề. Tối đa {MAX_TOPICS} chủ đề.</p>
+          </div>
 
-      <h1 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#111827", margin: "0 0 6px", letterSpacing: "-0.01em" }}>
-        Thêm chủ đề
-      </h1>
-      <p className={s.subtitle}>
-        Mỗi dòng là một chủ đề. AI sẽ bắt đầu nghiên cứu khi bạn nhấn "Bắt đầu" trong hàng đợi.
-      </p>
+          <div className={s.section}>
+            <div className={s.sectionHeader}>
+              <span className={s.stepNumber}>1</span>
+              <div>
+                <h2 className={s.sectionTitle}>Nhập chủ đề</h2>
+                <p className={s.sectionDescription}>
+                  Bạn có thể nhập tối đa {MAX_TOPICS} chủ đề cùng lúc.
+                </p>
+              </div>
+            </div>
 
-      <div className={s.textareaCard}>
-        <textarea
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={"Nhập chủ đề, mỗi dòng một chủ đề...\n\nVí dụ:\nYamaha U3\nKawai K300\nBest piano for beginners"}
-          rows={isMobile ? 7 : 9}
-          className={s.textarea}
-          style={{ fontSize: isMobile ? 14 : 13 }}
-        />
-        {lines.length > 0 && (
-          <div className={s.textareaFooter}>
-            <span style={{ fontSize: 12, color: "#6b7280" }}>{lines.length} chủ đề</span>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {lines.slice(0, 2).map((l, i) => (
-                <span key={i} className={s.previewChip}>
-                  {l.length > 18 ? l.slice(0, 18) + "…" : l}
-                </span>
-              ))}
-              {lines.length > 2 && <span style={{ fontSize: 11, color: "#9ca3af" }}>+{lines.length - 2}</span>}
+            <textarea
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder={"Nhập chủ đề, mỗi dòng một chủ đề...\n\nYamaha U3\nKawai K300\nBest piano for beginners"}
+              rows={isMobile ? 8 : 9}
+              className={s.textarea}
+              autoFocus
+            />
+
+            <div className={s.inputMeta}>
+              <span>
+                {lines.length > 0
+                  ? `${lines.length} chủ đề đã nhập`
+                  : "Mỗi dòng được tính là một chủ đề"}
+              </span>
+              <span>{lines.length}/{MAX_TOPICS} dòng</span>
             </div>
           </div>
-        )}
-      </div>
 
-      <div className={s.exampleBox}>
-        <div className={s.exampleLabel}>Ví dụ</div>
-        <pre className={s.examplePre}>{EXAMPLE}</pre>
-        <button onClick={() => setValue(EXAMPLE)} className={s.useExampleBtn}>
-          Dùng ví dụ này
-        </button>
-      </div>
+          <div className={s.divider} />
 
-      <div className={s.actions} style={{ flexDirection: isMobile ? "column" : "row" }}>
-        <button
-          onClick={handleSubmit}
-          disabled={!lines.length || added}
-          style={{
-            padding: "10px 20px",
-            background: added ? "#16a34a" : lines.length ? "#2563eb" : "#e5e7eb",
-            color: lines.length || added ? "#fff" : "#9ca3af",
-            border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600,
-            cursor: lines.length ? "pointer" : "default", fontFamily: "inherit",
-            flex: isMobile ? "1 1 auto" : "none",
-            transition: "background 0.2s",
-          }}
-        >
-          {added ? "✓ Đã thêm thành công!" : `Thêm ${lines.length > 0 ? lines.length + " " : ""}chủ đề`}
-        </button>
-        <button onClick={onBack} className={s.cancelBtn}>Hủy</button>
+          <div className={s.section}>
+            <div className={s.previewHeader}>
+              <div className={s.sectionHeader}>
+                <span className={s.stepNumber}>2</span>
+                <div>
+                  <h2 className={s.sectionTitle}>Xem trước</h2>
+                  <p className={s.sectionDescription}>
+                    Các chủ đề sẽ được thêm vào hàng đợi nghiên cứu.
+                  </p>
+                </div>
+              </div>
+              {lines.length > 0 && (
+                <span className={s.topicCount}>{lines.length} chủ đề</span>
+              )}
+            </div>
+
+            {lines.length > 0 ? (
+              <div className={s.previewList}>
+                {lines.map((topic, index) => (
+                  <div className={s.previewRow} key={`${topic}-${index}`}>
+                    <span className={s.rowNumber}>{index + 1}</span>
+                    <span className={s.topicName}>{topic}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={s.emptyPreview}>
+                Danh sách chủ đề sẽ xuất hiện ở đây sau khi bạn nhập.
+              </div>
+            )}
+          </div>
+
+          <div className={s.cardFooter}>
+            <div className={s.actions}>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!lines.length || added}
+                className={`${s.primaryBtn} ${added ? s.successBtn : ""}`}
+              >
+                {added
+                  ? "Đã thêm thành công"
+                  : lines.length > 0
+                    ? `Thêm ${lines.length} chủ đề`
+                    : "Thêm chủ đề"}
+              </button>
+
+              <button type="button" onClick={onBack} className={s.cancelBtn}>
+                Hủy
+              </button>
+            </div>
+
+            {!isMobile && (
+              <p className={s.footerNote}>
+                Các chủ đề sẽ được thêm vào hàng đợi nghiên cứu và xử lý lần lượt.
+              </p>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </PageShell>
   );
 }

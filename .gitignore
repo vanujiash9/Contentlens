@@ -18,3 +18,11 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+
+# Local agent/tooling artifacts
+/.claude/
+/.playwright-mcp/
+/.specify/
+/docs/
+*mcp*/
+contentlens-*.png

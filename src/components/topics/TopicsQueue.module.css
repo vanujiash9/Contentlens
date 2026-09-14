@@ -1,23 +1,24 @@
 .tableContainer {
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
 .tableHeader {
   display: grid;
-  grid-template-columns: 1fr 140px 120px 90px 130px;
-  padding: 10px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  grid-template-columns: 1fr 140px 120px 90px 120px 110px;
+  padding: 11px 20px;
+  border-bottom: 1px solid #e5e7eb;
   gap: 12px;
+  background: #fff;
 }
 
 .tableHeaderCell {
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: #94a3b8;
+  letter-spacing: 0.01em;
 }
 
 .mobileCard {
@@ -29,14 +30,15 @@
 
 .controlsRow {
   display: flex;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .filterBtnRow {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -45,7 +47,17 @@
 }
 
 .progressTrack {
-  height: 3px;
+  height: 4px;
   border-radius: 99px;
   overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .controlsRow {
+    align-items: stretch;
+  }
+
+  .filterBtnRow {
+    width: 100%;
+  }
 }
