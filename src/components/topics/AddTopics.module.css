@@ -79,11 +79,11 @@
 .sectionTitle {
   margin: 2px 0 4px;
   color: var(--text-strong);
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.04em;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
 }
 
 .sectionDescription {
@@ -218,8 +218,9 @@
 
 .emptyPreview strong {
   color: var(--text-strong);
-  font-family: var(--font-display);
-  font-size: 19px;
+  font-family: var(--font-ui);
+  font-size: 17px;
+  font-weight: 800;
   letter-spacing: -0.03em;
 }
 

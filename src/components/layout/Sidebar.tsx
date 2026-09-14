@@ -40,16 +40,6 @@ function QueueIcon({ size = 18 }: IconProps) {
   );
 }
 
-function AddIcon({ size = 18 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
-      <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M9 5.8V12.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M5.8 9H12.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function DiscoveryIcon({ size = 18 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
@@ -170,7 +160,6 @@ export default function Sidebar({
     activeView === "topics" ||
     isTopicDetail;
 
-  const addActive = activeView === "add-topics";
   const discoveryActive = activeView === "discovery";
   const briefActive = activeView === "briefs";
 
@@ -222,13 +211,6 @@ export default function Sidebar({
             icon={QueueIcon}
             active={queueActive}
             onClick={() => onNavigate("topics")}
-          />
-
-          <NavItem
-            label="Thêm chủ đề"
-            icon={AddIcon}
-            active={addActive}
-            onClick={() => onNavigate("add-topics")}
           />
 
           <NavItem

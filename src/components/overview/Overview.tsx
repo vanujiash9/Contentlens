@@ -202,11 +202,14 @@ function StatusDonut({
   failed: number
   total: number
 }) {
-  const safe = total || 1
+  const hasData = total > 0
+  const safe = hasData ? total : 1
   const p = (pending / safe) * 100
   const r = p + (processing / safe) * 100
   const c = r + (completed / safe) * 100
-  const gradient = `conic-gradient(var(--status-neutral) 0 ${p}%, var(--status-warning) ${p}% ${r}%, var(--status-success) ${r}% ${c}%, var(--status-danger) ${c}% 100%)`
+  const gradient = hasData
+    ? `conic-gradient(var(--status-neutral) 0 ${p}%, var(--status-warning) ${p}% ${r}%, var(--status-success) ${r}% ${c}%, var(--status-danger) ${c}% 100%)`
+    : "var(--surface-inset)"
   const rows = [
     ["Chờ xử lý", pending, s.gray],
     ["Đang chạy", processing, s.orange],
@@ -227,7 +230,7 @@ function StatusDonut({
             <span className={`${s.legendDot} ${cls}`} />
             <span>{label}</span>
             <strong>{value}</strong>
-            <em>{Math.round((value / safe) * 100)}%</em>
+            <em>{hasData ? Math.round((value / safe) * 100) : 0}%</em>
           </div>
         ))}
       </div>
@@ -246,9 +249,6 @@ export default function Overview({
   const completed = topics.filter((t) => t.status === "completed")
   const failed = topics.filter((t) => t.status === "failed")
   const pending = topics.filter((t) => t.status === "pending")
-  const topOpportunity = [...topics]
-    .filter((t) => t.opportunityScore != null)
-    .sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0))[0]
   const recentTopics = [...topics]
     .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
     .slice(0, 5)
@@ -299,56 +299,9 @@ export default function Overview({
   return (
     <PageShell
       title="Tổng quan"
-      subtitle="Theo dõi nghiên cứu, phát hiện topic tiềm năng và duyệt brief đã sẵn sàng."
+      subtitle="Theo dõi flow từ thêm topic, research, tạo brief đến duyệt nội dung."
       actions={headerActions}
     >
-      <section className={s.focusPanel}>
-        <div className={s.heroCard}>
-          <div className={s.heroContent}>
-            <p className={s.eyebrow}>Focus tuần này</p>
-            <h2 className={s.heroTitle}>
-              {pending.length} topic đang chờ quyết định
-            </h2>
-            <p className={s.heroText}>
-              Ưu tiên các nghiên cứu có opportunity score cao, sau đó duyệt
-              brief đã hoàn thành để chuyển nhanh sang sản xuất nội dung.
-            </p>
-            <div className={s.heroMetrics}>
-              <div className={s.heroMetric}>
-                <strong>{completed.length}</strong>
-                <span>đã hoàn thành</span>
-              </div>
-              <div className={s.heroMetric}>
-                <strong>{processing.length}</strong>
-                <span>đang chạy</span>
-              </div>
-              <div className={s.heroMetric}>
-                <strong>{failed.length}</strong>
-                <span>cần xử lý</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <aside className={s.priorityCard}>
-          <p className={s.priorityLabel}>Cơ hội cao nhất</p>
-          <h3 className={s.priorityTitle}>
-            {topOpportunity?.title ?? "Chưa có topic"}
-          </h3>
-          <p className={s.priorityText}>
-            {topOpportunity?.opportunityScore ?? 0}/100 · nên đưa vào research
-            queue trước.
-          </p>
-          <button
-            className={s.primaryBtn}
-            onClick={() =>
-              topOpportunity && onNavigate(`topic-${topOpportunity.id}`)
-            }
-          >
-            Xem chi tiết
-          </button>
-        </aside>
-      </section>
-
       <section className={s.statsGrid}>
         {stats.map((st) => (
           <div className={s.statCard} key={st.label}>
@@ -421,7 +374,18 @@ export default function Overview({
               </thead>
               <tbody>
                 {recentTopics.map((t, i) => (
-                  <tr key={t.id} onClick={() => onNavigate(`topic-${t.id}`)}>
+                  <tr
+                    key={t.id}
+                    onClick={() => onNavigate(`topic-${t.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        onNavigate(`topic-${t.id}`)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
                     <td>{i + 1}</td>
                     <td className={s.topicCell}>{t.title}</td>
                     <td>
