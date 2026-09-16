@@ -17,8 +17,8 @@ class StubOpenAIClient:
         user_prompt: str,
         temperature: float = 0.4,
     ) -> OpenAIProviderResult:
-        assert "ContentLens topic discovery" in system_prompt
-        assert "Generate 2 topic ideas" in user_prompt
+        assert "ContentLens Topic Discovery AI" in system_prompt
+        assert "Generate 2 content opportunity topic ideas" in user_prompt
         assert temperature == 0.4
         return OpenAIProviderResult(
             text=self.text,

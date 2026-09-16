@@ -1,5 +1,8 @@
 import json
 from dataclasses import dataclass
+from pathlib import Path
+
+from app.prompts.loader import load_system_prompt, load_user_prompt_template
 
 PROMPT_VERSION = "topic_discovery_v1"
 
@@ -12,11 +15,9 @@ class TopicDiscoveryPromptInput:
     result_count: int
 
 
-SYSTEM_PROMPT = (
-    "You are ContentLens topic discovery. Return only valid JSON, no markdown. "
-    "Your scores are AI estimates, not live search-volume data. "
-    "Do not include URLs or citations unless provided by the user."
-)
+PROMPT_DIR = Path(__file__).parent
+SYSTEM_PROMPT = load_system_prompt(PROMPT_DIR)
+USER_PROMPT_TEMPLATE = load_user_prompt_template(PROMPT_DIR)
 
 
 def build_user_prompt(request: TopicDiscoveryPromptInput) -> str:
@@ -34,12 +35,12 @@ def build_user_prompt(request: TopicDiscoveryPromptInput) -> str:
             }
         ]
     }
-    return (
-        f"Generate {request.result_count} topic ideas for the industry '{request.industry}' "
-        f"in market '{request.market}' over the last {request.period_days} days. "
-        "Favor practical content opportunities for an internal content research workflow. "
-        "Return exactly this JSON shape with no extra text:\n"
-        f"{json.dumps(schema_hint, ensure_ascii=False)}"
+    return USER_PROMPT_TEMPLATE.format(
+        result_count=request.result_count,
+        industry=request.industry,
+        market=request.market,
+        period_days=request.period_days,
+        schema_hint=json.dumps(schema_hint, ensure_ascii=False),
     )
 
 

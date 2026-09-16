@@ -9,7 +9,12 @@ from app.api.v1.workspaces import get_workspace_service
 from app.core.security import AuthenticatedUser
 from app.main import app
 from app.schemas.topics import TopicListResponse, TopicSummary
-from app.schemas.workspaces import CurrentUserResponse, WorkspaceSummary
+from app.schemas.workspaces import (
+    CreateWorkspaceRequest,
+    CurrentUserResponse,
+    WorkspaceResponse,
+    WorkspaceSummary,
+)
 
 USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 WORKSPACE_ID = UUID("10000000-0000-0000-0000-000000000001")
@@ -18,6 +23,10 @@ NOW = datetime(2026, 9, 16, tzinfo=timezone.utc)
 
 
 class StubWorkspaceService:
+    def __init__(self) -> None:
+        self.created_request: CreateWorkspaceRequest | None = None
+        self.created_by: AuthenticatedUser | None = None
+
     def get_current_user(self, current_user: AuthenticatedUser) -> CurrentUserResponse:
         return CurrentUserResponse(
             user_id=UUID(current_user.user_id),
@@ -30,6 +39,20 @@ class StubWorkspaceService:
                     role="owner",
                 )
             ],
+        )
+
+    def create_workspace(
+        self,
+        request: CreateWorkspaceRequest,
+        current_user: AuthenticatedUser,
+    ) -> WorkspaceResponse:
+        self.created_request = request
+        self.created_by = current_user
+        return WorkspaceResponse(
+            id=WORKSPACE_ID,
+            name=request.name,
+            slug=request.slug,
+            created_at=NOW,
         )
 
 
@@ -96,6 +119,62 @@ def test_get_me_returns_workspace_memberships() -> None:
             }
         ],
     }
+
+
+def test_create_workspace_returns_created_workspace() -> None:
+    workspace_service = StubWorkspaceService()
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_workspace_service] = lambda: workspace_service
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Content Growth Lab", "slug": "content-growth-lab"},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 201
+    assert workspace_service.created_request == CreateWorkspaceRequest(
+        name="Content Growth Lab",
+        slug="content-growth-lab",
+    )
+    assert workspace_service.created_by == AuthenticatedUser(
+        user_id=str(USER_ID),
+        email="owner@example.com",
+    )
+    assert response.json()["data"] == {
+        "id": str(WORKSPACE_ID),
+        "name": "Content Growth Lab",
+        "slug": "content-growth-lab",
+        "created_at": "2026-09-16T00:00:00Z",
+    }
+
+
+def test_create_workspace_rejects_invalid_request_body() -> None:
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_workspace_service] = StubWorkspaceService
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Content Growth Lab", "slug": "Invalid Slug"},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 422
+
+
+def test_create_workspace_requires_authentication() -> None:
+    app.dependency_overrides[get_workspace_service] = StubWorkspaceService
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Content Growth Lab", "slug": "content-growth-lab"},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 401
 
 
 def test_list_topics_returns_workspace_topics() -> None:

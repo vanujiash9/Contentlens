@@ -2,6 +2,8 @@ from uuid import UUID
 
 from supabase import Client
 
+WORKSPACE_SELECT = "id, name, slug, created_at"
+
 
 class WorkspaceRepository:
     def __init__(self, supabase: Client) -> None:
@@ -28,3 +30,36 @@ class WorkspaceRepository:
         )
 
         return len(response.data or []) > 0
+
+    def create_workspace(self, name: str, slug: str, created_by: UUID) -> dict:
+        response = (
+            self.supabase.table("workspaces")
+            .insert(
+                {
+                    "name": name,
+                    "slug": slug,
+                    "created_by": str(created_by),
+                }
+            )
+            .select(WORKSPACE_SELECT)
+            .single()
+            .execute()
+        )
+
+        return dict(response.data or {})
+
+    def create_owner_membership(self, workspace_id: UUID, user_id: UUID) -> None:
+        (
+            self.supabase.table("workspace_members")
+            .insert(
+                {
+                    "workspace_id": str(workspace_id),
+                    "user_id": str(user_id),
+                    "role": "owner",
+                }
+            )
+            .execute()
+        )
+
+    def delete_workspace(self, workspace_id: UUID) -> None:
+        self.supabase.table("workspaces").delete().eq("id", str(workspace_id)).execute()
