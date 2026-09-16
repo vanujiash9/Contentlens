@@ -1,29 +1,32 @@
-import { useState } from "react";
-import s from "./Login.module.css";
+import { useState } from "react"
+import { getErrorMessage } from "../../api/errors"
+import { useAuth } from "../../auth/AuthProvider"
+import s from "./Login.module.css"
 
-interface LoginProps {
-  onLogin: () => void;
-}
+export default function Login() {
+  const { signIn } = useAuth()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-export default function Login({ onLogin }: LoginProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!email || !password) {
-      setError("Vui lòng nhập đầy đủ thông tin.");
-      return;
+      setError("Vui lòng nhập đầy đủ thông tin.")
+      return
     }
-    setError("");
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onLogin();
-    }, 900);
-  };
+
+    setError("")
+    setLoading(true)
+    try {
+      await signIn(email, password)
+    } catch (signInError: unknown) {
+      setError(getErrorMessage(signInError))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className={s.wrapper}>
@@ -89,10 +92,10 @@ export default function Login({ onLogin }: LoginProps) {
           </form>
 
           <div className={s.cardFooter}>
-            <span className={s.footerNote}>Demo: bất kỳ email + mật khẩu</span>
+            <span className={s.footerNote}>Đăng nhập bằng tài khoản Supabase của workspace.</span>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

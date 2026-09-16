@@ -720,7 +720,7 @@ export default function ContentBriefs({ onNavigate }: ContentBriefsProps) {
       )
   }
 
-  const tabs: { key: typeof activeTab label: string }[] = [
+  const tabs: { key: typeof activeTab; label: string }[] = [
     { key: "all", label: "Tất cả" },
     { key: "pending_review", label: "Chờ duyệt" },
     { key: "approved", label: "Đã duyệt" },

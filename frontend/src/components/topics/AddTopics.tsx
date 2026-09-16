@@ -1,20 +1,23 @@
-import { useMemo, useState } from "react";
-import PageShell from "../ui/PageShell";
-import { useIsMobile } from "../../hooks/useIsMobile";
-import { layout } from "../../styles/tokens";
-import s from "./AddTopics.module.css";
+import { useMemo, useState } from "react"
+import { getErrorMessage } from "../../api/errors"
+import { useIsMobile } from "../../hooks/useIsMobile"
+import { layout } from "../../styles/tokens"
+import PageShell from "../ui/PageShell"
+import s from "./AddTopics.module.css"
 
 interface AddTopicsProps {
-  onBack: () => void;
-  onAdd: (topics: string[]) => void;
+  onBack: () => void
+  onAdd: (topics: string[]) => Promise<void> | void
 }
 
-const MAX_TOPICS = 50;
+const MAX_TOPICS = 50
 
 export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
-  const isMobile = useIsMobile();
-  const [value, setValue] = useState("");
-  const [added, setAdded] = useState(false);
+  const isMobile = useIsMobile()
+  const [value, setValue] = useState("")
+  const [added, setAdded] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
   const lines = useMemo(
     () =>
@@ -24,15 +27,24 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
         .filter(Boolean)
         .slice(0, MAX_TOPICS),
     [value],
-  );
+  )
 
-  const handleSubmit = () => {
-    if (!lines.length || added) return;
+  const handleSubmit = async () => {
+    if (!lines.length || added || isSubmitting) {
+      return
+    }
 
-    onAdd(lines);
-    setAdded(true);
-    window.setTimeout(onBack, 1200);
-  };
+    setError("")
+    setIsSubmitting(true)
+    try {
+      await onAdd(lines)
+      setAdded(true)
+    } catch (submitError: unknown) {
+      setError(getErrorMessage(submitError))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <PageShell
@@ -115,18 +127,22 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
           </div>
 
           <div className={s.cardFooter}>
+            {error ? <div className={s.emptyPreview}>{error}</div> : null}
+
             <div className={s.actions}>
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!lines.length || added}
+                disabled={!lines.length || added || isSubmitting}
                 className={`${s.primaryBtn} ${added ? s.successBtn : ""}`}
               >
                 {added
                   ? "Đã thêm thành công"
-                  : lines.length > 0
-                    ? `Thêm ${lines.length} chủ đề`
-                    : "Thêm chủ đề"}
+                  : isSubmitting
+                    ? "Đang thêm..."
+                    : lines.length > 0
+                      ? `Thêm ${lines.length} chủ đề`
+                      : "Thêm chủ đề"}
               </button>
 
               <button type="button" onClick={onBack} className={s.cancelBtn}>
@@ -143,5 +159,5 @@ export default function AddTopics({ onBack, onAdd }: AddTopicsProps) {
         </section>
       </div>
     </PageShell>
-  );
+  )
 }

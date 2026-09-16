@@ -1,12 +1,14 @@
-import { useRef, useState } from "react"
-import { MOCK_TOPICS, RESEARCH_STEPS, type Topic } from "../../data/mockData"
+import { useState } from "react"
+import { type Topic } from "../../data/mockData"
 import { useIsMobile } from "../../hooks/useIsMobile"
 import PageShell from "../ui/PageShell"
 import s from "./TopicsQueue.module.css"
 
 interface TopicsQueueProps {
   onNavigate: (view: string) => void
-  extraTopics?: Topic[]
+  topics: Topic[]
+  isLoading?: boolean
+  error?: string | null
 }
 
 const FILTERS: { value: Topic["status"] | "all"; label: string }[] = [
@@ -61,102 +63,23 @@ function Progress({ topic }: { topic: Topic }) {
   return <span className={s.emptyValue}>—</span>
 }
 
-export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueueProps) {
+export default function TopicsQueue({
+  onNavigate,
+  topics,
+  isLoading = false,
+  error = null,
+}: TopicsQueueProps) {
   const isMobile = useIsMobile()
   const [filter, setFilter] = useState<Topic["status"] | "all">("all")
   const [search, setSearch] = useState("")
-  const [topics, setTopics] = useState(() => {
-    const extraIds = new Set(extraTopics.map((t) => t.id))
-    return [...MOCK_TOPICS.filter((t) => !extraIds.has(t.id)), ...extraTopics]
-  })
-  const timers = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
 
-  const allTopics = (() => {
-    const inState = new Set(topics.map((t) => t.id))
-    const newExtra = extraTopics.filter((t) => !inState.has(t.id))
-    return newExtra.length ? [...topics, ...newExtra] : topics
-  })()
+  const allTopics = topics
 
   const filtered = allTopics.filter((topic) => {
     const matchFilter = filter === "all" || topic.status === filter
     const matchSearch = topic.title.toLowerCase().includes(search.toLowerCase())
     return matchFilter && matchSearch
   })
-
-  const handleStart = (id: string) => {
-    setTopics((prev) =>
-      prev.map((topic) =>
-        topic.id === id && topic.status === "pending"
-          ? {
-              ...topic,
-              status: "processing" as const,
-              researchProgress: 0,
-              currentStep: RESEARCH_STEPS[0].label,
-            }
-          : topic,
-      ),
-    )
-
-    let pct = 0
-    const timer = setInterval(() => {
-      pct += Math.random() * 7 + 3
-      if (pct >= 100) {
-        pct = 100
-        clearInterval(timer)
-        timers.current.delete(id)
-        setTopics((prev) =>
-          prev.map((topic) =>
-            topic.id === id
-              ? {
-                  ...topic,
-                  status: "completed" as const,
-                  researchProgress: 100,
-                  currentStep: undefined,
-                }
-              : topic,
-          ),
-        )
-        return
-      }
-
-      const stepIdx = Math.min(
-        Math.floor((pct / 100) * RESEARCH_STEPS.length),
-        RESEARCH_STEPS.length - 1,
-      )
-      setTopics((prev) =>
-        prev.map((topic) =>
-          topic.id === id
-            ? {
-                ...topic,
-                researchProgress: Math.round(pct),
-                currentStep: RESEARCH_STEPS[stepIdx].label,
-              }
-            : topic,
-        ),
-      )
-    }, 900)
-
-    timers.current.set(id, timer)
-  }
-
-  const handleRetry = (id: string) => {
-    setTopics((prev) =>
-      prev.map((topic) =>
-        topic.id === id && topic.status === "failed"
-          ? { ...topic, status: "pending" as const }
-          : topic,
-      ),
-    )
-  }
-
-  const handleDelete = (id: string) => {
-    const timer = timers.current.get(id)
-    if (timer) {
-      clearInterval(timer)
-      timers.current.delete(id)
-    }
-    setTopics((prev) => prev.filter((topic) => topic.id !== id))
-  }
 
   const openTopic = (topic: Topic) => {
     if (topic.status === "completed") onNavigate(`topic-${topic.id}`)
@@ -179,6 +102,9 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
       subtitle={`${allTopics.length} chủ đề · ${pendingCount(allTopics)} đang chờ`}
       actions={!isMobile ? headerActions : undefined}
     >
+      {isLoading ? <div className={s.emptyState}>Đang tải chủ đề...</div> : null}
+      {error ? <div className={s.emptyState}>{error}</div> : null}
+
       <div className={s.controlsRow}>
         <input
           type="text"
@@ -232,9 +158,6 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
                 <TopicActions
                   topic={topic}
                   onOpen={() => onNavigate(`topic-${topic.id}`)}
-                  onStart={() => handleStart(topic.id)}
-                  onRetry={() => handleRetry(topic.id)}
-                  onDelete={() => handleDelete(topic.id)}
                 />
               </article>
             ))
@@ -298,9 +221,6 @@ export default function TopicsQueue({ onNavigate, extraTopics = [] }: TopicsQueu
                 <TopicActions
                   topic={topic}
                   onOpen={() => onNavigate(`topic-${topic.id}`)}
-                  onStart={() => handleStart(topic.id)}
-                  onRetry={() => handleRetry(topic.id)}
-                  onDelete={() => handleDelete(topic.id)}
                 />
               </div>
             ))
@@ -330,15 +250,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 function TopicActions({
   topic,
   onOpen,
-  onStart,
-  onRetry,
-  onDelete,
 }: {
   topic: Topic
   onOpen: () => void
-  onStart: () => void
-  onRetry: () => void
-  onDelete: () => void
 }) {
   return (
     <div className={s.actions}>
@@ -347,19 +261,7 @@ function TopicActions({
           Xem
         </button>
       ) : null}
-      {topic.status === "pending" ? (
-        <button className={s.actionBtn} onClick={onStart}>
-          Bắt đầu
-        </button>
-      ) : null}
-      {topic.status === "failed" ? (
-        <button className={s.actionBtn} onClick={onRetry}>
-          Thử lại
-        </button>
-      ) : null}
-      <button className={s.deleteBtn} onClick={onDelete} aria-label={`Xóa ${topic.title}`}>
-        ×
-      </button>
+      {topic.status !== "completed" ? <span className={s.emptyValue}>Đang chờ API xử lý</span> : null}
     </div>
   )
 }

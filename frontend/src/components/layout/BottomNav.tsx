@@ -229,7 +229,7 @@ export default function BottomNav({ activeView, onNavigate }: BottomNavProps) {
             onClick={() => onNavigate(item.id)}
             className={`${s.navBtn} ${isAdd ? s.addNavBtn : ""}`}
           >
-            {item.icon(active)}
+            {item.icon()}
 
             {!isAdd && (
               <span
