@@ -1,7 +1,7 @@
 import type { Topic, TopicSource } from "@/types/domain"
 import type { ApiClient } from "./client"
 
-interface TopicSummaryDto {
+export interface TopicSummaryDto {
   id: string
   title: string
   status: Topic["status"]
@@ -20,7 +20,7 @@ interface TopicListDto {
   topics: TopicSummaryDto[]
 }
 
-function mapTopic(dto: TopicSummaryDto): Topic {
+export function mapTopic(dto: TopicSummaryDto): Topic {
   return {
     id: dto.id,
     title: dto.title,

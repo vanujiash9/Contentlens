@@ -34,9 +34,16 @@ async def list_workspaces(
     return ApiResponse(data=workspace_service.get_current_user(current_user).workspaces)
 
 
-@router.post("/workspaces", response_model=ApiResponse[WorkspaceResponse], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/workspaces",
+    response_model=ApiResponse[WorkspaceResponse],
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_workspace() -> ApiResponse[WorkspaceResponse]:
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Workspace creation is defined in the contract and will be implemented with persistence.",
+        detail=(
+            "Workspace creation is defined in the contract and will be implemented "
+            "with persistence."
+        ),
     )

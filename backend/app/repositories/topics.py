@@ -34,3 +34,41 @@ class TopicRepository:
         response = self.supabase.table("topics").insert(rows).execute()
 
         return list(response.data or [])
+
+    def create_from_discovered_topic(
+        self,
+        workspace_id: UUID,
+        user_id: UUID,
+        discovered_topic: dict,
+    ) -> dict:
+        response = (
+            self.supabase.table("topics")
+            .insert(
+                {
+                    "workspace_id": str(workspace_id),
+                    "created_by": str(user_id),
+                    "title": discovered_topic["title"],
+                    "source": "ai",
+                    "opportunity_score": discovered_topic["opportunity_score"],
+                    "priority": discovered_topic["priority"],
+                }
+            )
+            .execute()
+        )
+
+        return response.data[0]
+
+    def get_by_id(self, workspace_id: UUID, topic_id: UUID) -> dict | None:
+        response = (
+            self.supabase.table("topics")
+            .select(
+                "id, title, status, source, opportunity_score, priority, "
+                "research_progress, current_step, created_at, updated_at, completed_at, version"
+            )
+            .eq("workspace_id", str(workspace_id))
+            .eq("id", str(topic_id))
+            .limit(1)
+            .execute()
+        )
+        rows = list(response.data or [])
+        return rows[0] if rows else None

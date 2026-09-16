@@ -15,8 +15,7 @@ import AddTopics from "./components/topics/AddTopics"
 import ContentBriefs from "./components/briefs/ContentBriefs"
 import TopicDiscovery from "./components/discovery/TopicDiscovery"
 import { useIsMobile } from "./hooks/useIsMobile"
-import { type DiscoveredTopic, type Topic } from "./data/mockData"
-
+import { type Topic } from "./data/mockData"
 type View = "overview" | "topics" | "briefs" | "add-topics" | "discovery" | `topic-${string}`
 
 function TopBar({ onLogout }: { onLogout: () => void }) {
@@ -189,12 +188,26 @@ export default function App() {
     }
   }
 
-  const handleAddFromDiscovery = async (discovered: DiscoveredTopic) => {
-    await handleAddTopics([discovered.title])
+  const handleAddFromDiscovery = (topic: Topic) => {
+    setTopics((currentTopics) => {
+      if (currentTopics.some((currentTopic) => currentTopic.id === topic.id)) {
+        return currentTopics
+      }
+
+      return [topic, ...currentTopics]
+    })
   }
 
   const renderContent = () => {
     if (workspaceId === null && workspaces.length === 0) {
+      if (isDataLoading) {
+        return <div className={s.content}>Đang tải workspace...</div>
+      }
+
+      if (dataError !== null) {
+        return <div className={s.content}>{dataError}</div>
+      }
+
       return <div className={s.content}>Tài khoản này chưa có workspace.</div>
     }
 
@@ -229,12 +242,16 @@ export default function App() {
     }
 
     if (view === "discovery") {
+      if (workspaceId === null) {
+        return <div className={s.content}>Workspace chưa sẵn sàng.</div>
+      }
+
       return (
         <TopicDiscovery
+          apiClient={apiClient}
+          workspaceId={workspaceId}
           onNavigate={navigate}
-          onAddToQueue={(discovered) => {
-            void handleAddFromDiscovery(discovered)
-          }}
+          onAddToQueue={handleAddFromDiscovery}
         />
       )
     }

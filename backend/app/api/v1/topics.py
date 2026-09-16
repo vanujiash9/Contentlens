@@ -33,7 +33,11 @@ async def list_topics(
     return ApiResponse(data=topic_service.list_topics(workspace_id, current_user.user_id))
 
 
-@router.post(":batch", response_model=ApiResponse[list[TopicSummary]], status_code=status.HTTP_201_CREATED)
+@router.post(
+    ":batch",
+    response_model=ApiResponse[list[TopicSummary]],
+    status_code=status.HTTP_201_CREATED,
+)
 async def batch_create_topics(
     workspace_id: UUID,
     request: BatchCreateTopicsRequest,
