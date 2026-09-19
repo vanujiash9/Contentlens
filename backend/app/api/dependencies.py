@@ -9,10 +9,15 @@ from app.core.config import Settings, get_settings
 from app.core.security import AuthenticatedUser, verify_supabase_token
 from app.core.supabase import get_supabase_client
 from app.integrations.openai_client import OpenAIClient
+from app.repositories.briefs import BriefRepository
 from app.repositories.discovery import DiscoveryRepository
 from app.repositories.topics import TopicRepository
+from app.repositories.workflow_runs import WorkflowRunRepository
 from app.repositories.workspaces import WorkspaceRepository
+from app.services.briefs import BriefService
 from app.services.discovery import DiscoveryService
+from app.workflows.content_brief import ContentBriefWorkflow
+from app.workflows.topic_discovery import TopicDiscoveryWorkflow
 
 
 async def get_current_user(
@@ -42,13 +47,39 @@ def get_topic_discovery_generator(
     return OpenAITopicDiscoveryGenerator(ai_router)
 
 
+def get_topic_discovery_workflow(
+    client: OpenAIClient = Depends(get_openai_client),
+) -> TopicDiscoveryWorkflow:
+    return TopicDiscoveryWorkflow(client)
+
+
+def get_content_brief_workflow(
+    client: OpenAIClient = Depends(get_openai_client),
+) -> ContentBriefWorkflow:
+    return ContentBriefWorkflow(client)
+
+
 def get_discovery_service(
     supabase: Client = Depends(get_supabase_client),
-    generator: OpenAITopicDiscoveryGenerator = Depends(get_topic_discovery_generator),
+    workflow: TopicDiscoveryWorkflow = Depends(get_topic_discovery_workflow),
 ) -> DiscoveryService:
     return DiscoveryService(
         discovery_repository=DiscoveryRepository(supabase),
         topic_repository=TopicRepository(supabase),
         workspace_repository=WorkspaceRepository(supabase),
-        generator=generator,
+        workflow_run_repository=WorkflowRunRepository(supabase),
+        workflow=workflow,
+    )
+
+
+def get_brief_service(
+    supabase: Client = Depends(get_supabase_client),
+    workflow: ContentBriefWorkflow = Depends(get_content_brief_workflow),
+) -> BriefService:
+    return BriefService(
+        brief_repository=BriefRepository(supabase),
+        topic_repository=TopicRepository(supabase),
+        workspace_repository=WorkspaceRepository(supabase),
+        workflow_run_repository=WorkflowRunRepository(supabase),
+        workflow=workflow,
     )

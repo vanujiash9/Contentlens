@@ -4,11 +4,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.ai.topic_discovery import (
-    DiscoveryProviderResult,
-    DiscoveryUsage,
-    TopicDiscoveryError,
-)
+from app.ai.provider import AIUsage
 from app.api.dependencies import get_current_user, get_discovery_service
 from app.core.security import AuthenticatedUser
 from app.main import app
@@ -21,6 +17,8 @@ from app.schemas.discovery import (
     SignalDetail,
 )
 from app.schemas.topics import TopicSummary
+from app.workflows.core import WorkflowError
+from app.workflows.topic_discovery import TopicDiscoveryWorkflowResult
 
 USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 WORKSPACE_ID = UUID("10000000-0000-0000-0000-000000000001")
@@ -135,20 +133,40 @@ class FakeTopicRepository:
     pass
 
 
-class FakeGenerator:
+class FakeWorkflowRunRepository:
+    def __init__(self) -> None:
+        self.completed_run = False
+        self.failed_run = False
+
+    def create_run(self, **kwargs) -> dict:
+        _ = kwargs
+        return {"id": str(RUN_ID)}
+
+    def mark_completed(self, **kwargs) -> dict:
+        _ = kwargs
+        self.completed_run = True
+        return {"id": str(RUN_ID)}
+
+    def mark_failed(self, **kwargs) -> dict:
+        _ = kwargs
+        self.failed_run = True
+        return {"id": str(RUN_ID)}
+
+
+class FakeWorkflow:
     def __init__(self, should_fail: bool = False) -> None:
         self.was_called = False
         self.should_fail = should_fail
 
-    def generate(self, request):
+    def run(self, **kwargs) -> TopicDiscoveryWorkflowResult:
         self.was_called = True
         if self.should_fail:
-            raise TopicDiscoveryError
-        return DiscoveryProviderResult(
+            raise WorkflowError("generate_topics", RuntimeError("boom"))
+        return TopicDiscoveryWorkflowResult(
             generation=DiscoveryGeneration(topics=[make_generated_topic()]),
             provider="test",
             model="test-model",
-            usage=DiscoveryUsage(input_tokens=1, output_tokens=2),
+            usage=AIUsage(input_tokens=1, output_tokens=2),
         )
 
 
@@ -328,12 +346,13 @@ def test_add_discovered_topic_to_queue_returns_topic() -> None:
 def test_service_checks_membership_before_calling_ai() -> None:
     from app.services.discovery import DiscoveryService
 
-    generator = FakeGenerator()
+    workflow = FakeWorkflow()
     service = DiscoveryService(
         discovery_repository=FakeDiscoveryRepository(),
         topic_repository=FakeTopicRepository(),
         workspace_repository=FakeWorkspaceRepository(is_member=False),
-        generator=generator,
+        workflow_run_repository=FakeWorkflowRunRepository(),
+        workflow=workflow,
     )
 
     try:
@@ -347,7 +366,7 @@ def test_service_checks_membership_before_calling_ai() -> None:
     except HTTPException as exc:
         assert exc.status_code == 404
 
-    assert generator.was_called is False
+    assert workflow.was_called is False
 
 
 def test_service_marks_run_failed_when_ai_provider_fails() -> None:
@@ -358,7 +377,8 @@ def test_service_marks_run_failed_when_ai_provider_fails() -> None:
         discovery_repository=repository,
         topic_repository=FakeTopicRepository(),
         workspace_repository=FakeWorkspaceRepository(is_member=True),
-        generator=FakeGenerator(should_fail=True),
+        workflow_run_repository=FakeWorkflowRunRepository(),
+        workflow=FakeWorkflow(should_fail=True),
     )
 
     try:

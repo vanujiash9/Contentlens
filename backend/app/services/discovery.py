@@ -3,14 +3,15 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 
+from app.ai.provider import AIProviderInvalidResponseError
 from app.ai.topic_discovery import (
-    DiscoveryPromptInput,
     TopicDiscoveryError,
-    TopicDiscoveryGenerator,
+    TopicDiscoveryInvalidResponseError,
     raise_discovery_http_error,
 )
 from app.repositories.discovery import DiscoveryRepository
 from app.repositories.topics import TopicRepository
+from app.repositories.workflow_runs import WorkflowRunRepository
 from app.repositories.workspaces import WorkspaceRepository
 from app.schemas.discovery import (
     CreateDiscoveryRunRequest,
@@ -21,6 +22,11 @@ from app.schemas.discovery import (
 from app.schemas.topics import TopicSummary
 from app.services.topics import TopicService
 from app.services.workspaces import parse_user_id
+from app.workflows.core import WorkflowError
+from app.workflows.topic_discovery import TopicDiscoveryWorkflow, TopicDiscoveryWorkflowInput
+
+TOPIC_DISCOVERY_WORKFLOW_NAME = "topic_discovery"
+DISCOVERY_RUN_SUBJECT_TYPE = "discovery_run"
 
 
 class DiscoveryService:
@@ -29,12 +35,14 @@ class DiscoveryService:
         discovery_repository: DiscoveryRepository,
         topic_repository: TopicRepository,
         workspace_repository: WorkspaceRepository,
-        generator: TopicDiscoveryGenerator,
+        workflow_run_repository: WorkflowRunRepository,
+        workflow: TopicDiscoveryWorkflow,
     ) -> None:
         self.discovery_repository = discovery_repository
         self.topic_repository = topic_repository
         self.workspace_repository = workspace_repository
-        self.generator = generator
+        self.workflow_run_repository = workflow_run_repository
+        self.workflow = workflow
 
     def create_discovery_run(
         self,
@@ -53,25 +61,48 @@ class DiscoveryService:
             result_count=request.result_count,
         )
         run_id = UUID(str(run["id"]))
+        workflow_run = self.workflow_run_repository.create_run(
+            workspace_id=workspace_id,
+            user_id=user_id,
+            workflow_name=TOPIC_DISCOVERY_WORKFLOW_NAME,
+            subject_type=DISCOVERY_RUN_SUBJECT_TYPE,
+            subject_id=run_id,
+            input_data={
+                "industry": request.industry,
+                "market": request.market,
+                "period_days": request.period_days,
+                "result_count": request.result_count,
+            },
+        )
+        workflow_run_id = UUID(str(workflow_run["id"]))
 
         started_at = monotonic()
         try:
-            result = self.generator.generate(
-                DiscoveryPromptInput(
+            result = self.workflow.run(
+                run_id=run_id,
+                workspace_id=workspace_id,
+                request=TopicDiscoveryWorkflowInput(
                     industry=request.industry,
                     market=request.market,
                     period_days=request.period_days,
                     result_count=request.result_count,
-                )
+                ),
             )
-        except TopicDiscoveryError as error:
+        except WorkflowError as error:
+            discovery_error = map_workflow_error(error)
             self.discovery_repository.mark_run_failed(
                 workspace_id=workspace_id,
                 run_id=run_id,
-                error_code=error.error_code,
-                error_message=error.message,
+                error_code=discovery_error.error_code,
+                error_message=discovery_error.message,
             )
-            raise_discovery_http_error(error)
+            self.workflow_run_repository.mark_failed(
+                workspace_id=workspace_id,
+                run_id=workflow_run_id,
+                error_code=discovery_error.error_code,
+                error_message=discovery_error.message,
+            )
+            raise_discovery_http_error(discovery_error)
 
         topics = self.discovery_repository.insert_topics(
             workspace_id=workspace_id,
@@ -86,6 +117,15 @@ class DiscoveryService:
             input_tokens=result.usage.input_tokens,
             output_tokens=result.usage.output_tokens,
             latency_ms=max(0, round((monotonic() - started_at) * 1000)),
+        )
+        self.workflow_run_repository.mark_completed(
+            workspace_id=workspace_id,
+            run_id=workflow_run_id,
+            output_data=result.generation.model_dump(mode="json"),
+            provider=result.provider,
+            model=result.model,
+            input_tokens=result.usage.input_tokens,
+            output_tokens=result.usage.output_tokens,
         )
 
         return self._map_run(completed_run, topics)
@@ -186,6 +226,12 @@ class DiscoveryService:
             topic_id=row.get("topic_id"),
             created_at=row["created_at"],
         )
+
+
+def map_workflow_error(error: WorkflowError) -> TopicDiscoveryError:
+    if isinstance(error.cause, AIProviderInvalidResponseError):
+        return TopicDiscoveryInvalidResponseError()
+    return TopicDiscoveryError()
 
 
 def parse_period_days(value: object) -> int | None:
