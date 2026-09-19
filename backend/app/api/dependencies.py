@@ -14,6 +14,7 @@ from app.repositories.discovery import DiscoveryRepository
 from app.repositories.topics import TopicRepository
 from app.repositories.workflow_runs import WorkflowRunRepository
 from app.repositories.workspaces import WorkspaceRepository
+from app.services.agent import ContentLensAgentService
 from app.services.briefs import BriefService
 from app.services.discovery import DiscoveryService
 from app.workflows.content_brief import ContentBriefWorkflow
@@ -82,4 +83,14 @@ def get_brief_service(
         workspace_repository=WorkspaceRepository(supabase),
         workflow_run_repository=WorkflowRunRepository(supabase),
         workflow=workflow,
+    )
+
+
+def get_agent_service(
+    discovery_service: DiscoveryService = Depends(get_discovery_service),
+    brief_service: BriefService = Depends(get_brief_service),
+) -> ContentLensAgentService:
+    return ContentLensAgentService(
+        discovery_service=discovery_service,
+        brief_service=brief_service,
     )
