@@ -15,7 +15,7 @@ import AddTopics from "./components/topics/AddTopics"
 import ContentBriefs from "./components/briefs/ContentBriefs"
 import TopicDiscovery from "./components/discovery/TopicDiscovery"
 import { useIsMobile } from "./hooks/useIsMobile"
-import { type Topic } from "./data/mockData"
+import type { Topic } from "./types/domain"
 type View = "overview" | "topics" | "briefs" | "add-topics" | "discovery" | `topic-${string}`
 
 function TopBar({ onLogout }: { onLogout: () => void }) {
@@ -212,12 +212,14 @@ export default function App() {
     }
 
     if (view === "overview") {
-      return <Overview onNavigate={navigate} />
+      return <Overview onNavigate={navigate} topics={topics} />
     }
 
     if (view === "topics") {
       return (
         <TopicsQueue
+          apiClient={apiClient}
+          workspaceId={workspaceId ?? ""}
           onNavigate={navigate}
           topics={topics}
           isLoading={isDataLoading}
@@ -238,7 +240,11 @@ export default function App() {
     }
 
     if (view === "briefs") {
-      return <ContentBriefs onNavigate={navigate} />
+      if (workspaceId === null) {
+        return <div className={s.content}>Workspace chưa sẵn sàng.</div>
+      }
+
+      return <ContentBriefs apiClient={apiClient} workspaceId={workspaceId} onNavigate={navigate} />
     }
 
     if (view === "discovery") {
@@ -260,6 +266,7 @@ export default function App() {
       return (
         <TopicDetail
           topicId={view.replace("topic-", "")}
+          topics={topics}
           onNavigate={navigate}
         />
       )

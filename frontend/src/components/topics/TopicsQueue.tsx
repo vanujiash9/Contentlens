@@ -1,10 +1,15 @@
 import { useState } from "react"
-import { type Topic } from "../../data/mockData"
+import { generateBriefWithAgent } from "../../api/agent"
+import type { ApiClient } from "../../api/client"
+import { getErrorMessage } from "../../api/errors"
+import type { Topic } from "../../types/domain"
 import { useIsMobile } from "../../hooks/useIsMobile"
 import PageShell from "../ui/PageShell"
 import s from "./TopicsQueue.module.css"
 
 interface TopicsQueueProps {
+  apiClient: ApiClient
+  workspaceId: string
   onNavigate: (view: string) => void
   topics: Topic[]
   isLoading?: boolean
@@ -64,6 +69,8 @@ function Progress({ topic }: { topic: Topic }) {
 }
 
 export default function TopicsQueue({
+  apiClient,
+  workspaceId,
   onNavigate,
   topics,
   isLoading = false,
@@ -72,6 +79,9 @@ export default function TopicsQueue({
   const isMobile = useIsMobile()
   const [filter, setFilter] = useState<Topic["status"] | "all">("all")
   const [search, setSearch] = useState("")
+  const [generatingBriefIds, setGeneratingBriefIds] = useState<Set<string>>(new Set())
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const allTopics = topics
 
@@ -83,6 +93,43 @@ export default function TopicsQueue({
 
   const openTopic = (topic: Topic) => {
     if (topic.status === "completed") onNavigate(`topic-${topic.id}`)
+  }
+
+  const handleGenerateBrief = async (topic: Topic) => {
+    if (workspaceId.length === 0 || generatingBriefIds.has(topic.id)) {
+      return
+    }
+
+    setActionError(null)
+    setActionMessage(null)
+    setGeneratingBriefIds((current) => new Set([...current, topic.id]))
+
+    try {
+      await generateBriefWithAgent(apiClient, workspaceId, {
+        topicId: topic.id,
+        industry: "Piano & nhạc cụ phím",
+        market: "Việt Nam",
+        audience: "Người đang tìm hiểu chủ đề này",
+        searchIntent: `Tìm hiểu và ra quyết định về ${topic.title}`,
+        angle: topic.priority === "high" ? "Tập trung vào nhu cầu mua hàng có tín hiệu cao" : "Hướng dẫn thực tế theo nhu cầu người đọc",
+        businessGoal: "Tạo nội dung có khả năng hỗ trợ tư vấn và chuyển đổi khách hàng",
+        researchInsights: [
+          `Chủ đề: ${topic.title}`,
+          topic.opportunityScore !== undefined ? `Điểm cơ hội: ${topic.opportunityScore}/100` : "Chưa có điểm cơ hội",
+          topic.priority !== undefined ? `Mức ưu tiên: ${topic.priority}` : "Chưa có mức ưu tiên",
+        ].join("\n"),
+      })
+      setActionMessage(`Đã tạo brief cho “${topic.title}”.`)
+      onNavigate("briefs")
+    } catch (generateError: unknown) {
+      setActionError(getErrorMessage(generateError))
+    } finally {
+      setGeneratingBriefIds((current) => {
+        const next = new Set(current)
+        next.delete(topic.id)
+        return next
+      })
+    }
   }
 
   const headerActions = (
@@ -104,6 +151,8 @@ export default function TopicsQueue({
     >
       {isLoading ? <div className={s.emptyState}>Đang tải chủ đề...</div> : null}
       {error ? <div className={s.emptyState}>{error}</div> : null}
+      {actionError ? <div className={s.emptyState}>{actionError}</div> : null}
+      {actionMessage ? <div className={s.emptyState}>{actionMessage}</div> : null}
 
       <div className={s.controlsRow}>
         <input
@@ -157,7 +206,9 @@ export default function TopicsQueue({
                 <Progress topic={topic} />
                 <TopicActions
                   topic={topic}
+                  isGeneratingBrief={generatingBriefIds.has(topic.id)}
                   onOpen={() => onNavigate(`topic-${topic.id}`)}
+                  onGenerateBrief={() => void handleGenerateBrief(topic)}
                 />
               </article>
             ))
@@ -220,7 +271,9 @@ export default function TopicsQueue({
                 </time>
                 <TopicActions
                   topic={topic}
+                  isGeneratingBrief={generatingBriefIds.has(topic.id)}
                   onOpen={() => onNavigate(`topic-${topic.id}`)}
+                  onGenerateBrief={() => void handleGenerateBrief(topic)}
                 />
               </div>
             ))
@@ -249,10 +302,14 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 function TopicActions({
   topic,
+  isGeneratingBrief,
   onOpen,
+  onGenerateBrief,
 }: {
   topic: Topic
+  isGeneratingBrief: boolean
   onOpen: () => void
+  onGenerateBrief: () => void
 }) {
   return (
     <div className={s.actions}>
@@ -261,6 +318,9 @@ function TopicActions({
           Xem
         </button>
       ) : null}
+      <button className={s.actionBtn} onClick={onGenerateBrief} disabled={isGeneratingBrief}>
+        {isGeneratingBrief ? "Đang tạo..." : "Tạo brief"}
+      </button>
       {topic.status !== "completed" ? <span className={s.emptyValue}>Đang chờ API xử lý</span> : null}
     </div>
   )

@@ -1,11 +1,12 @@
 import { useState } from "react"
-import { MOCK_TOPICS, type Topic } from "../../data/mockData"
+import type { Topic } from "../../types/domain"
 import { colors } from "../../styles/tokens"
 import PageShell from "../ui/PageShell"
 import s from "./TopicDetail.module.css"
 
 interface TopicDetailProps {
   topicId: string
+  topics: Topic[]
   onNavigate: (view: string) => void
 }
 
@@ -118,8 +119,8 @@ function SourcesTab({ topic }: { topic: Topic }) {
   )
 }
 
-export default function TopicDetail({ topicId, onNavigate }: TopicDetailProps) {
-  const topic = MOCK_TOPICS.find((item) => item.id === topicId)
+export default function TopicDetail({ topicId, topics, onNavigate }: TopicDetailProps) {
+  const topic = topics.find((item) => item.id === topicId)
   const [tab, setTab] = useState<TabId>("overview")
 
   if (!topic) return <div className={s.emptyState}>Topic không tồn tại.</div>

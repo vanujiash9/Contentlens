@@ -1,13 +1,20 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { listBriefs, type BriefSummary } from "../../api/briefs"
+import type { ApiClient } from "../../api/client"
+import { getErrorMessage } from "../../api/errors"
+import type { ContentBrief, Topic } from "../../types/domain"
 import PageShell from "../ui/PageShell"
-import { MOCK_TOPICS, type Topic } from "../../data/mockData"
 import { useIsMobile } from "../../hooks/useIsMobile"
 import { layout } from "../../styles/tokens"
 import s from "./ContentBriefs.module.css"
 
 interface ContentBriefsProps {
+  apiClient: ApiClient
+  workspaceId: string
   onNavigate: (view: string) => void
 }
+
+type BriefTopic = Topic & { brief: ContentBrief }
 
 type ReviewStatus = "pending_review" | "approved"
 
@@ -40,7 +47,7 @@ function BriefCard({
   approvedAt,
   onOpen,
 }: {
-  topic: Topic
+  topic: BriefTopic
   reviewStatus: ReviewStatus
   approvedAt?: string
   onOpen: () => void
@@ -197,7 +204,7 @@ function BriefViewer({
   onStatusChange,
   existingApprovedAt,
 }: {
-  topic: Topic
+  topic: BriefTopic
   onClose: () => void
   onStatusChange?: (id: string, status: ReviewStatus, at?: string) => void
   existingApprovedAt?: string
@@ -672,30 +679,61 @@ function BriefViewer({
   )
 }
 
-export default function ContentBriefs({ onNavigate }: ContentBriefsProps) {
+export default function ContentBriefs({ apiClient, workspaceId, onNavigate }: ContentBriefsProps) {
   const isMobile = useIsMobile()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] =
     useState<"all" | "pending_review" | "approved">("all")
+  const [briefs, setBriefs] = useState<BriefSummary[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [reviewStatuses, setReviewStatuses] = useState<Record<string, ReviewStatus>>({})
+  const [approvalTimes, setApprovalTimes] = useState<Record<string, string>>({})
 
-  const topicsWithBriefs = MOCK_TOPICS.filter((t) => t.brief != null)
-  const [reviewStatuses, setReviewStatuses] =
-    useState<Record<string, ReviewStatus>>(() => {
-      const init: Record<string, ReviewStatus> = {}
-      topicsWithBriefs.forEach((t) => {
-        init[t.id] = t.brief?.approvedAt ? "approved" : "pending_review"
+  useEffect(() => {
+    let isActive = true
+    setIsLoading(true)
+    setError(null)
+
+    listBriefs(apiClient, workspaceId)
+      .then((nextBriefs) => {
+        if (!isActive) {
+          return
+        }
+        setBriefs(nextBriefs)
+        setReviewStatuses((current) => {
+          const next = { ...current }
+          nextBriefs.forEach((brief) => {
+            next[brief.id] = brief.reviewStatus === "approved" ? "approved" : "pending_review"
+          })
+          return next
+        })
       })
-      return init
-    })
-  const [approvalTimes, setApprovalTimes] = useState<Record<string, string>>(
-    () => {
-      const init: Record<string, string> = {}
-      topicsWithBriefs.forEach((t) => {
-        if (t.brief?.approvedAt) init[t.id] = t.brief.approvedAt
+      .catch((loadError: unknown) => {
+        if (isActive) {
+          setError(getErrorMessage(loadError))
+        }
       })
-      return init
-    },
-  )
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [apiClient, workspaceId])
+
+  const topicsWithBriefs: BriefTopic[] = briefs.map((brief) => ({
+    id: brief.id,
+    title: brief.title,
+    status: "completed",
+    source: "ai",
+    createdAt: brief.createdAt,
+    updatedAt: brief.updatedAt,
+    brief,
+  }))
 
   const filtered =
     activeTab === "all"
@@ -732,6 +770,8 @@ export default function ContentBriefs({ onNavigate }: ContentBriefsProps) {
       subtitle={`${topicsWithBriefs.length} brief đã tạo · Output cuối cùng của AI research`}
       maxWidth={layout.contentWidth}
     >
+      {isLoading ? <div className={s.emptyCard}>Đang tải brief...</div> : null}
+      {error ? <div className={s.emptyCard}>{error}</div> : null}
       <div className={s.tabBar}>
         {tabs.map((tab) => {
           const count =

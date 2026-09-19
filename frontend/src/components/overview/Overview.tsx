@@ -1,5 +1,6 @@
 import PageShell from "../ui/PageShell"
-import { MOCK_TOPICS, MOCK_ACTIVITY } from "../../data/mockData"
+import { MOCK_ACTIVITY } from "../../data/mockData"
+import type { Topic } from "../../types/domain"
 import { useIsMobile } from "../../hooks/useIsMobile"
 import s from "./Overview.module.css"
 
@@ -240,11 +241,12 @@ function StatusDonut({
 
 export default function Overview({
   onNavigate,
+  topics,
 }: {
   onNavigate: (v: string) => void
+  topics: Topic[]
 }) {
   const isMobile = useIsMobile()
-  const topics = MOCK_TOPICS
   const processing = topics.filter((t) => t.status === "processing")
   const completed = topics.filter((t) => t.status === "completed")
   const failed = topics.filter((t) => t.status === "failed")
