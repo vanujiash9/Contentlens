@@ -72,3 +72,48 @@ class TopicRepository:
         )
         rows = list(response.data or [])
         return rows[0] if rows else None
+
+    def mark_processing(self, workspace_id: UUID, topic_id: UUID, current_step: str) -> dict:
+        response = (
+            self.supabase.table("topics")
+            .update({"status": "processing", "research_progress": 10, "current_step": current_step})
+            .eq("workspace_id", str(workspace_id))
+            .eq("id", str(topic_id))
+            .execute()
+        )
+        return response.data[0]
+
+    def mark_completed(
+        self,
+        workspace_id: UUID,
+        topic_id: UUID,
+        opportunity_score: int | None,
+        priority: str | None,
+    ) -> dict:
+        response = (
+            self.supabase.table("topics")
+            .update(
+                {
+                    "status": "completed",
+                    "research_progress": 100,
+                    "current_step": "Nghiên cứu hoàn tất",
+                    "opportunity_score": opportunity_score,
+                    "priority": priority,
+                    "completed_at": "now()",
+                }
+            )
+            .eq("workspace_id", str(workspace_id))
+            .eq("id", str(topic_id))
+            .execute()
+        )
+        return response.data[0]
+
+    def mark_failed(self, workspace_id: UUID, topic_id: UUID, error_message: str) -> dict:
+        response = (
+            self.supabase.table("topics")
+            .update({"status": "failed", "current_step": error_message})
+            .eq("workspace_id", str(workspace_id))
+            .eq("id", str(topic_id))
+            .execute()
+        )
+        return response.data[0]

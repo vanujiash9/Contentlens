@@ -73,6 +73,10 @@ class DiscoveryRunSummary(BaseModel):
     topics: list[DiscoveredTopicSummary]
 
 
+class DiscoveryRunListResponse(BaseModel):
+    runs: list[DiscoveryRunSummary]
+
+
 class GeneratedDiscoveredTopic(BaseModel):
     title: str = Field(min_length=1, max_length=MAX_DISCOVERY_TITLE_LENGTH)
     opportunity_score: int = Field(ge=0, le=100)

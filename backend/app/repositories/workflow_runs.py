@@ -5,6 +5,12 @@ from uuid import UUID
 from supabase import Client
 
 
+WORKFLOW_RUN_SELECT = (
+    "id, workflow_name, subject_type, subject_id, status, error_code, error_message, "
+    "started_at, completed_at, failed_at"
+)
+
+
 class WorkflowRunRepository:
     def __init__(self, supabase: Client) -> None:
         self.supabase = supabase
@@ -92,3 +98,23 @@ class WorkflowRunRepository:
             .execute()
         )
         return response.data[0]
+
+    def get_latest_for_subject(
+        self,
+        *,
+        workspace_id: UUID,
+        subject_type: str,
+        subject_id: UUID,
+    ) -> dict | None:
+        response = (
+            self.supabase.table("workflow_runs")
+            .select(WORKFLOW_RUN_SELECT)
+            .eq("workspace_id", str(workspace_id))
+            .eq("subject_type", subject_type)
+            .eq("subject_id", str(subject_id))
+            .order("started_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = list(response.data or [])
+        return rows[0] if rows else None

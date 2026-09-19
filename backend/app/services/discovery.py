@@ -16,6 +16,7 @@ from app.repositories.workspaces import WorkspaceRepository
 from app.schemas.discovery import (
     CreateDiscoveryRunRequest,
     DiscoveredTopicSummary,
+    DiscoveryRunListResponse,
     DiscoveryRunSummary,
     SignalDetail,
 )
@@ -145,6 +146,43 @@ class DiscoveryService:
                 detail="Discovery run not found",
             )
 
+        topics = self.discovery_repository.list_topics_for_run(workspace_id, run_id)
+        return self._map_run(run, topics)
+
+    def list_discovery_runs(
+        self,
+        workspace_id: UUID,
+        current_user_id: str,
+        limit: int,
+    ) -> DiscoveryRunListResponse:
+        user_id = parse_user_id(current_user_id)
+        self._ensure_workspace_member(user_id, workspace_id)
+        runs = self.discovery_repository.list_runs(workspace_id, limit)
+        return DiscoveryRunListResponse(
+            runs=[
+                self._map_run(
+                    run,
+                    self.discovery_repository.list_topics_for_run(workspace_id, UUID(str(run["id"]))),
+                )
+                for run in runs
+            ]
+        )
+
+    def get_latest_discovery_run(
+        self,
+        workspace_id: UUID,
+        current_user_id: str,
+    ) -> DiscoveryRunSummary:
+        user_id = parse_user_id(current_user_id)
+        self._ensure_workspace_member(user_id, workspace_id)
+        run = self.discovery_repository.get_latest_run(workspace_id)
+        if run is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Discovery run not found",
+            )
+
+        run_id = UUID(str(run["id"]))
         topics = self.discovery_repository.list_topics_for_run(workspace_id, run_id)
         return self._map_run(run, topics)
 

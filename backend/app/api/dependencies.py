@@ -11,12 +11,14 @@ from app.core.supabase import get_supabase_client
 from app.integrations.openai_client import OpenAIClient
 from app.repositories.briefs import BriefRepository
 from app.repositories.discovery import DiscoveryRepository
+from app.repositories.research import ResearchRepository
 from app.repositories.topics import TopicRepository
 from app.repositories.workflow_runs import WorkflowRunRepository
 from app.repositories.workspaces import WorkspaceRepository
 from app.services.agent import ContentLensAgentService
 from app.services.briefs import BriefService
 from app.services.discovery import DiscoveryService
+from app.workflows.brief_revision import BriefRevisionWorkflow
 from app.workflows.content_brief import ContentBriefWorkflow
 from app.workflows.topic_discovery import TopicDiscoveryWorkflow
 
@@ -60,6 +62,12 @@ def get_content_brief_workflow(
     return ContentBriefWorkflow(client)
 
 
+def get_brief_revision_workflow(
+    client: OpenAIClient = Depends(get_openai_client),
+) -> BriefRevisionWorkflow:
+    return BriefRevisionWorkflow(client)
+
+
 def get_discovery_service(
     supabase: Client = Depends(get_supabase_client),
     workflow: TopicDiscoveryWorkflow = Depends(get_topic_discovery_workflow),
@@ -76,6 +84,7 @@ def get_discovery_service(
 def get_brief_service(
     supabase: Client = Depends(get_supabase_client),
     workflow: ContentBriefWorkflow = Depends(get_content_brief_workflow),
+    revision_workflow: BriefRevisionWorkflow = Depends(get_brief_revision_workflow),
 ) -> BriefService:
     return BriefService(
         brief_repository=BriefRepository(supabase),
@@ -83,6 +92,8 @@ def get_brief_service(
         workspace_repository=WorkspaceRepository(supabase),
         workflow_run_repository=WorkflowRunRepository(supabase),
         workflow=workflow,
+        revision_workflow=revision_workflow,
+        research_repository=ResearchRepository(supabase),
     )
 
 

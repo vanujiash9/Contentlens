@@ -41,6 +41,7 @@ class ContentBriefGeneration(BaseModel):
     key_questions: list[str] = Field(min_length=1, max_length=12)
     outline: list[dict[str, Any]] = Field(min_length=1, max_length=20)
     key_facts: list[str] = Field(default_factory=list, max_length=20)
+    draft: str = Field(default="", max_length=20000)
     must_cover: list[str] = Field(default_factory=list, max_length=20)
     must_avoid: list[str] = Field(default_factory=list, max_length=20)
     evidence_map: list[dict[str, Any]] = Field(default_factory=list, max_length=30)
@@ -53,9 +54,28 @@ class ContentBriefGeneration(BaseModel):
         "target_audience",
         "objective",
         "angle",
+        "draft",
     )
     @classmethod
-    def strip_required_text(cls, value: str) -> str:
+    def strip_text_fields(cls, value: str, info: ValidationInfo) -> str:
+        stripped = value.strip()
+        if info.field_name != "draft" and len(stripped) == 0:
+            raise ValueError("Field cannot be empty.")
+        return stripped
+
+
+class SaveBriefDraftRequest(BaseModel):
+    draft: str = Field(max_length=20000)
+    expected_version: int | None = Field(default=None, ge=1)
+
+
+class RequestBriefRevisionRequest(BaseModel):
+    request: str = Field(min_length=1, max_length=4000)
+    expected_version: int | None = Field(default=None, ge=1)
+
+    @field_validator("request")
+    @classmethod
+    def strip_request(cls, value: str) -> str:
         stripped = value.strip()
         if len(stripped) == 0:
             raise ValueError("Field cannot be empty.")
@@ -74,10 +94,16 @@ class BriefSummary(BaseModel):
     key_questions: list[Any]
     outline: list[Any]
     key_facts: list[Any]
+    draft: str | None = None
     must_cover: list[Any]
     must_avoid: list[Any]
     evidence_map: list[Any]
     review_status: str
+    approved_at: datetime | None = None
+    word_count: int = 0
+    sources_used: int = 0
+    total_claims: int = 0
+    cited_claims: int = 0
     quality_checks: list[Any]
     quality_warnings: list[Any]
     created_at: datetime

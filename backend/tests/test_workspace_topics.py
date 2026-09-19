@@ -8,7 +8,8 @@ from app.api.v1.topics import get_topic_service
 from app.api.v1.workspaces import get_workspace_service
 from app.core.security import AuthenticatedUser
 from app.main import app
-from app.schemas.topics import TopicListResponse, TopicSummary
+from app.schemas.research import TopicResearchAggregate
+from app.schemas.topics import TopicDetailResponse, TopicListResponse, TopicSummary
 from app.schemas.workspaces import (
     CreateWorkspaceRequest,
     CurrentUserResponse,
@@ -75,6 +76,20 @@ class StubTopicService:
         assert current_user_id == str(USER_ID)
         self.created_titles = titles
         return [make_topic(title.strip()) for title in titles]
+
+    def get_topic_detail(
+        self,
+        workspace_id: UUID,
+        topic_id: UUID,
+        current_user_id: str,
+    ) -> TopicDetailResponse:
+        assert workspace_id == WORKSPACE_ID
+        assert topic_id == TOPIC_ID
+        assert current_user_id == str(USER_ID)
+        return TopicDetailResponse(
+            topic=make_topic("Yamaha U3"),
+            research=TopicResearchAggregate(),
+        )
 
 
 def make_topic(title: str) -> TopicSummary:
@@ -206,3 +221,39 @@ def test_batch_create_topics_returns_created_topics() -> None:
     assert response.status_code == 201
     assert topic_service.created_titles == [" Yamaha U3 "]
     assert response.json()["data"][0]["title"] == "Yamaha U3"
+
+
+def test_get_topic_returns_research_aggregate() -> None:
+    app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_topic_service] = StubTopicService
+    client = TestClient(app)
+
+    response = client.get(f"/api/v1/workspaces/{WORKSPACE_ID}/topics/{TOPIC_ID}")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["data"] == {
+        "topic": {
+            "id": str(TOPIC_ID),
+            "title": "Yamaha U3",
+            "status": "pending",
+            "source": "user",
+            "opportunity_score": None,
+            "priority": None,
+            "research_progress": 0,
+            "current_step": None,
+            "created_at": "2026-09-16T00:00:00Z",
+            "updated_at": "2026-09-16T00:00:00Z",
+            "completed_at": None,
+            "version": 1,
+        },
+        "research": {
+            "plan": None,
+            "queries": [],
+            "sources": [],
+            "findings": [],
+            "information_gaps": [],
+            "opportunity": None,
+        },
+        "workflow": None,
+    }

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.dependencies import get_current_user, get_discovery_service
 from app.core.security import AuthenticatedUser
@@ -8,6 +8,7 @@ from app.schemas.common import ApiResponse
 from app.schemas.discovery import (
     AddDiscoveredTopicResponse,
     CreateDiscoveryRunRequest,
+    DiscoveryRunListResponse,
     DiscoveryRunSummary,
 )
 from app.services.discovery import DiscoveryService
@@ -28,6 +29,29 @@ async def create_discovery_run(
 ) -> ApiResponse[DiscoveryRunSummary]:
     return ApiResponse(
         data=discovery_service.create_discovery_run(workspace_id, current_user.user_id, request)
+    )
+
+
+@router.get("/discovery-runs", response_model=ApiResponse[DiscoveryRunListResponse])
+async def list_discovery_runs(
+    workspace_id: UUID,
+    limit: int = Query(default=10, ge=1, le=20),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    discovery_service: DiscoveryService = Depends(get_discovery_service),
+) -> ApiResponse[DiscoveryRunListResponse]:
+    return ApiResponse(
+        data=discovery_service.list_discovery_runs(workspace_id, current_user.user_id, limit)
+    )
+
+
+@router.get("/discovery-runs/latest", response_model=ApiResponse[DiscoveryRunSummary])
+async def get_latest_discovery_run(
+    workspace_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    discovery_service: DiscoveryService = Depends(get_discovery_service),
+) -> ApiResponse[DiscoveryRunSummary]:
+    return ApiResponse(
+        data=discovery_service.get_latest_discovery_run(workspace_id, current_user.user_id)
     )
 
 

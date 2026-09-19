@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.research import TopicResearchAggregate
+
 TopicStatus = Literal["pending", "processing", "completed", "failed"]
 PriorityLevel = Literal["high", "medium", "low"]
 TopicSource = Literal["user", "ai"]
@@ -22,6 +24,23 @@ class TopicSummary(BaseModel):
     updated_at: datetime
     completed_at: datetime | None = None
     version: int
+
+
+class TopicWorkflowStatus(BaseModel):
+    id: UUID
+    workflow_name: str
+    status: str
+    error_code: str | None = None
+    error_message: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    failed_at: datetime | None = None
+
+
+class TopicDetailResponse(BaseModel):
+    topic: TopicSummary
+    research: TopicResearchAggregate
+    workflow: TopicWorkflowStatus | None = None
 
 
 class BatchCreateTopicsRequest(BaseModel):

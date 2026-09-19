@@ -4,7 +4,13 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.dependencies import get_brief_service, get_current_user
 from app.core.security import AuthenticatedUser
-from app.schemas.briefs import BriefListResponse, BriefSummary, GenerateContentBriefRequest
+from app.schemas.briefs import (
+    BriefListResponse,
+    BriefSummary,
+    GenerateContentBriefRequest,
+    RequestBriefRevisionRequest,
+    SaveBriefDraftRequest,
+)
 from app.schemas.common import ApiResponse
 from app.services.briefs import BriefService
 
@@ -44,3 +50,41 @@ async def get_brief(
     brief_service: BriefService = Depends(get_brief_service),
 ) -> ApiResponse[BriefSummary]:
     return ApiResponse(data=brief_service.get_brief(workspace_id, current_user.user_id, brief_id))
+
+
+@router.patch("/{brief_id}/draft", response_model=ApiResponse[BriefSummary])
+async def save_brief_draft(
+    workspace_id: UUID,
+    brief_id: UUID,
+    request: SaveBriefDraftRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    brief_service: BriefService = Depends(get_brief_service),
+) -> ApiResponse[BriefSummary]:
+    return ApiResponse(
+        data=brief_service.save_draft(workspace_id, current_user.user_id, brief_id, request)
+    )
+
+
+@router.post("/{brief_id}:approve", response_model=ApiResponse[BriefSummary])
+async def approve_brief(
+    workspace_id: UUID,
+    brief_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    brief_service: BriefService = Depends(get_brief_service),
+) -> ApiResponse[BriefSummary]:
+    return ApiResponse(
+        data=brief_service.approve_brief(workspace_id, current_user.user_id, brief_id)
+    )
+
+
+@router.post("/{brief_id}/revisions", response_model=ApiResponse[BriefSummary])
+async def request_brief_revision(
+    workspace_id: UUID,
+    brief_id: UUID,
+    request: RequestBriefRevisionRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    brief_service: BriefService = Depends(get_brief_service),
+) -> ApiResponse[BriefSummary]:
+    return ApiResponse(
+        data=brief_service.request_revision(workspace_id, current_user.user_id, brief_id, request)
+    )

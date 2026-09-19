@@ -58,6 +58,21 @@ class DiscoveryRepository:
         rows = list(response.data or [])
         return rows[0] if rows else None
 
+    def list_runs(self, workspace_id: UUID, limit: int) -> list[dict]:
+        response = (
+            self.supabase.table("discovery_runs")
+            .select(DISCOVERY_RUN_SELECT)
+            .eq("workspace_id", str(workspace_id))
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return list(response.data or [])
+
+    def get_latest_run(self, workspace_id: UUID) -> dict | None:
+        rows = self.list_runs(workspace_id, 1)
+        return rows[0] if rows else None
+
     def list_topics_for_run(self, workspace_id: UUID, run_id: UUID) -> list[dict]:
         response = (
             self.supabase.table("discovered_topics")

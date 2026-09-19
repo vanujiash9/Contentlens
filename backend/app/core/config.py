@@ -24,6 +24,20 @@ class Settings(BaseSettings):
         validation_alias="OPENAI__MAX_OUTPUT_TOKENS",
     )
     ai_discovery_enabled: bool = True
+    search_provider: str | None = Field(default=None, validation_alias="SEARCH__PROVIDER")
+    search_api_key: SecretStr | None = Field(default=None, validation_alias="SEARCH__API_KEY")
+    search_base_url: AnyHttpUrl | None = Field(default=None, validation_alias="SEARCH__BASE_URL")
+    search_result_limit: int = Field(default=10, validation_alias="SEARCH__RESULT_LIMIT")
+    search_timeout_seconds: int = Field(default=20, validation_alias="SEARCH__TIMEOUT_SECONDS")
+    source_fetch_timeout_seconds: int = Field(default=20, validation_alias="SOURCE_FETCH__TIMEOUT_SECONDS")
+    source_fetch_max_characters: int = Field(
+        default=30000,
+        validation_alias="SOURCE_FETCH__MAX_CHARACTERS",
+    )
+    source_fetch_user_agent: str = Field(
+        default="ContentLensBot/0.1 (+https://contentlens.local)",
+        validation_alias="SOURCE_FETCH__USER_AGENT",
+    )
 
 
 @lru_cache
