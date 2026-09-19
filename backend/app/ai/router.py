@@ -1,9 +1,10 @@
-import json
 from dataclasses import dataclass
 
-from pydantic import ValidationError
-
-from app.integrations.openai_client import OpenAIClient, OpenAIClientError
+from app.ai.provider import (
+    AIProviderError,
+    AIProviderInvalidResponseError,
+    StructuredOutputProvider,
+)
 from app.prompts import topic_discovery
 from app.schemas.ai import AIProviderMetadata, TopicDiscoveryAIResponse
 from app.schemas.discovery import DiscoveryGeneration
@@ -28,8 +29,8 @@ class TopicDiscoveryInput:
 
 
 class AIRouter:
-    def __init__(self, client: OpenAIClient) -> None:
-        self.client = client
+    def __init__(self, provider: StructuredOutputProvider) -> None:
+        self.provider = provider
 
     def run_topic_discovery(self, request: TopicDiscoveryInput) -> TopicDiscoveryAIResponse:
         prompt_input = topic_discovery.TopicDiscoveryPromptInput(
@@ -39,15 +40,18 @@ class AIRouter:
             result_count=request.result_count,
         )
         try:
-            provider_result = self.client.generate_json(
+            provider_result = self.provider.generate_structured(
                 system_prompt=topic_discovery.SYSTEM_PROMPT,
                 user_prompt=topic_discovery.build_user_prompt(prompt_input),
+                output_model=DiscoveryGeneration,
             )
             generation = parse_topic_discovery_generation(
-                provider_result.text,
+                provider_result.output,
                 expected_count=request.result_count,
             )
-        except OpenAIClientError as exc:
+        except AIProviderInvalidResponseError as exc:
+            raise AIInvalidResponseError from exc
+        except AIProviderError as exc:
             raise AIError from exc
 
         return TopicDiscoveryAIResponse(
@@ -62,13 +66,10 @@ class AIRouter:
         )
 
 
-def parse_topic_discovery_generation(text: str, expected_count: int) -> DiscoveryGeneration:
-    try:
-        decoded = json.loads(text)
-        generation = DiscoveryGeneration.model_validate(decoded)
-    except (json.JSONDecodeError, ValidationError) as exc:
-        raise AIInvalidResponseError from exc
-
+def parse_topic_discovery_generation(
+    generation: DiscoveryGeneration,
+    expected_count: int,
+) -> DiscoveryGeneration:
     deduped = dedupe_topics(generation)
     if len(deduped.topics) == 0:
         raise AIInvalidResponseError
@@ -85,5 +86,8 @@ def dedupe_topics(generation: DiscoveryGeneration) -> DiscoveryGeneration:
             continue
         seen.add(key)
         topics.append(topic)
+
+    if len(topics) == 0:
+        raise AIInvalidResponseError
 
     return DiscoveryGeneration(topics=topics)

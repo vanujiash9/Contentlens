@@ -1,53 +1,53 @@
-from dataclasses import dataclass
-from typing import Any, Literal
+import json
+from typing import Any, TypeVar
 
 import httpx
+from pydantic import BaseModel, ValidationError
 
+from app.ai.provider import (
+    AIProviderError,
+    AIProviderInvalidResponseError,
+    AIProviderNotConfiguredError,
+    AIUsage,
+    StructuredGenerationResult,
+)
 from app.core.config import Settings
 
 PROVIDER_NAME = "openai-compatible"
+StructuredOutput = TypeVar("StructuredOutput", bound=BaseModel)
 
 
-class OpenAIClientError(Exception):
+class OpenAIClientError(AIProviderError):
     error_code = "AI_PROVIDER_UNAVAILABLE"
     message = "AI provider is temporarily unavailable."
 
 
-class OpenAIClientNotConfiguredError(OpenAIClientError):
+class OpenAIClientNotConfiguredError(OpenAIClientError, AIProviderNotConfiguredError):
     error_code = "AI_NOT_CONFIGURED"
     message = "AI provider is not configured."
 
 
-class OpenAIClientInvalidResponseError(OpenAIClientError):
+class OpenAIClientInvalidResponseError(OpenAIClientError, AIProviderInvalidResponseError):
     error_code = "AI_INVALID_RESPONSE"
     message = "AI provider returned an invalid response."
 
 
-@dataclass(frozen=True)
-class OpenAIUsage:
-    input_tokens: int | None = None
-    output_tokens: int | None = None
-
-
-@dataclass(frozen=True)
-class OpenAIProviderResult:
-    text: str
-    provider: str
-    model: str
-    usage: OpenAIUsage
+OpenAIUsage = AIUsage
+OpenAIProviderResult = StructuredGenerationResult
 
 
 class OpenAIClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    def generate_json(
+    def generate_structured(
         self,
         *,
         system_prompt: str,
         user_prompt: str,
+        output_model: type[StructuredOutput],
         temperature: float = 0.4,
-    ) -> OpenAIProviderResult:
+    ) -> StructuredGenerationResult[StructuredOutput]:
         if not self._is_configured():
             raise OpenAIClientNotConfiguredError
 
@@ -57,16 +57,21 @@ class OpenAIClient:
                 {"role": "user", "content": user_prompt},
             ],
             temperature=temperature,
-            response_format={"type": "json_object"},
+            response_format=build_json_schema_response_format(output_model),
         )
         text = extract_response_text(body)
         usage = body.get("usage") or {}
 
-        return OpenAIProviderResult(
-            text=text,
+        try:
+            output = output_model.model_validate(json.loads(text))
+        except (json.JSONDecodeError, ValidationError) as exc:
+            raise OpenAIClientInvalidResponseError from exc
+
+        return StructuredGenerationResult(
+            output=output,
             provider=PROVIDER_NAME,
             model=self.settings.openai_model or "unknown",
-            usage=OpenAIUsage(
+            usage=AIUsage(
                 input_tokens=usage.get("prompt_tokens"),
                 output_tokens=usage.get("completion_tokens"),
             ),
@@ -77,7 +82,7 @@ class OpenAIClient:
         *,
         messages: list[dict[str, str]],
         temperature: float,
-        response_format: dict[str, Literal["json_object"]],
+        response_format: dict[str, Any],
     ) -> dict[str, Any]:
         base_url = str(self.settings.openai_base_url).rstrip("/")
         payload = {
@@ -118,6 +123,16 @@ class OpenAIClient:
             and self.settings.openai_base_url is not None
             and self.settings.openai_model is not None
         )
+
+
+def build_json_schema_response_format(output_model: type[BaseModel]) -> dict[str, Any]:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": output_model.__name__,
+            "schema": output_model.model_json_schema(),
+        },
+    }
 
 
 def extract_response_text(body: dict[str, Any]) -> str:
