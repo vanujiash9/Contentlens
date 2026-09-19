@@ -1,5 +1,6 @@
 import PageShell from "../ui/PageShell"
 import { MOCK_ACTIVITY } from "../../data/mockData"
+import type { BriefSummary } from "../../api/briefs"
 import type { Topic } from "../../types/domain"
 import { useIsMobile } from "../../hooks/useIsMobile"
 import s from "./Overview.module.css"
@@ -44,12 +45,6 @@ const ACTIVITY_LABELS: Record<string, { label: string; className: string }> = {
   ai_discovery: { label: "AI khám phá chủ đề", className: s.gray },
 }
 
-const CONTENT_SUFFIXES = [
-  ": Đâu là lựa chọn phù hợp?",
-  ": Hướng dẫn từ A đến Z",
-  ": Có đáng mua không?",
-  ": Hướng dẫn chi tiết",
-]
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   review: "Đánh giá",
   comparison: "So sánh",
@@ -242,9 +237,11 @@ function StatusDonut({
 export default function Overview({
   onNavigate,
   topics,
+  briefs,
 }: {
   onNavigate: (v: string) => void
   topics: Topic[]
+  briefs: BriefSummary[]
 }) {
   const isMobile = useIsMobile()
   const processing = topics.filter((t) => t.status === "processing")
@@ -254,13 +251,15 @@ export default function Overview({
   const recentTopics = [...topics]
     .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
     .slice(0, 5)
-  const contentItems = completed
+  const pendingBriefs = briefs.filter((brief) => brief.reviewStatus !== "approved")
+  const contentItems = [...briefs]
+    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
     .slice(0, 5)
-    .map((t, i) => ({
-      id: t.id,
-      title: t.title + CONTENT_SUFFIXES[i % CONTENT_SUFFIXES.length],
-      updatedAt: t.updatedAt,
-      type: ["comparison", "review", "article", "comparison", "product"][i % 5],
+    .map((brief) => ({
+      id: brief.id,
+      title: brief.title,
+      updatedAt: brief.updatedAt,
+      type: "article",
     }))
   const stats = [
     {
@@ -279,13 +278,13 @@ export default function Overview({
       label: "Hoàn thành",
       value: completed.length,
       tone: "green",
-      delta: "+1 brief mới",
+      delta: `${briefs.length} brief đã tạo`,
     },
     {
       label: "Thất bại",
       value: failed.length,
       tone: "red",
-      delta: "1 cần thử lại",
+      delta: `${pendingBriefs.length} brief chờ duyệt`,
     },
   ]
 
@@ -407,17 +406,24 @@ export default function Overview({
             <button onClick={() => onNavigate("briefs")}>Xem tất cả →</button>
           </div>
           <div className={s.contentList}>
-            {contentItems.map((c) => (
-              <article className={s.contentItem} key={c.id}>
-                <strong>{c.title}</strong>
-                <div className={s.contentMeta}>
-                  <span className={`${s.typeBadge} ${s[`type_${c.type}`]}`}>
-                    {CONTENT_TYPE_LABELS[c.type]}
-                  </span>
-                  <span>{fmtDate(c.updatedAt)}</span>
-                </div>
-              </article>
-            ))}
+            {contentItems.length === 0 ? (
+              <div className={s.contentItem}>
+                <strong>Chưa có content brief nào.</strong>
+                <div className={s.contentMeta}>Tạo brief từ hàng đợi chủ đề để hiển thị tại đây.</div>
+              </div>
+            ) : (
+              contentItems.map((c) => (
+                <article className={s.contentItem} key={c.id}>
+                  <strong>{c.title}</strong>
+                  <div className={s.contentMeta}>
+                    <span className={`${s.typeBadge} ${s[`type_${c.type}`]}`}>
+                      {CONTENT_TYPE_LABELS[c.type]}
+                    </span>
+                    <span>{fmtDate(c.updatedAt)}</span>
+                  </div>
+                </article>
+              ))
+            )}
           </div>
         </div>
       </section>

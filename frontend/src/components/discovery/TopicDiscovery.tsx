@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react"
-import { addDiscoveredTopicToQueue, createDiscoveryRun } from "../../api/discovery"
+import {
+  addDiscoveredTopicToQueue,
+  createDiscoveryRun,
+  getDiscoveryRun,
+  getLatestDiscoveryRun,
+  type DiscoveryRun,
+} from "../../api/discovery"
 import type { ApiClient } from "../../api/client"
 import { getErrorMessage } from "../../api/errors"
 import type { DiscoveredTopic, SignalDetail, Topic } from "../../types/domain"
@@ -13,6 +19,8 @@ interface TopicDiscoveryProps {
   workspaceId: string
   onNavigate: (view: string) => void
   onAddToQueue?: (topic: Topic) => void
+  initialRun?: DiscoveryRun | null
+  onRunChange?: (run: DiscoveryRun | null) => void
 }
 
 const SIGNAL_COLOR: Record<string, string> = { high: "#16a34a", medium: "#d97706", low: "#9ca3af" }
@@ -25,6 +33,18 @@ const PRIORITY_LABELS = {
 } as const
 
 type PeriodDays = 7 | 30 | 90
+
+function getStorageKey(workspaceId: string): string {
+  return `contentlens:last-discovery-run:${workspaceId}`
+}
+
+function getAddedTopicIds(topics: DiscoveredTopic[]): Set<string> {
+  return new Set(
+    topics
+      .filter((topic) => topic.addedToQueueAt !== undefined || topic.topicId !== undefined)
+      .map((topic) => topic.id),
+  )
+}
 
 function SignalCard({ label, signal }: { label: string; signal: SignalDetail }) {
   const color = SIGNAL_COLOR[signal.level]
@@ -85,16 +105,23 @@ function Toast({ msg, onDone }: { msg: string; onDone: () => void }) {
   )
 }
 
-export default function TopicDiscovery({ apiClient, workspaceId, onNavigate, onAddToQueue }: TopicDiscoveryProps) {
+export default function TopicDiscovery({
+  apiClient,
+  workspaceId,
+  onNavigate,
+  onAddToQueue,
+  initialRun = null,
+  onRunChange,
+}: TopicDiscoveryProps) {
   const isMobile = useIsMobile()
-  const [industry, setIndustry] = useState("Piano & nhạc cụ phím")
-  const [market, setMarket] = useState("Việt Nam")
-  const [period, setPeriod] = useState<`${PeriodDays}`>("30")
-  const [count, setCount] = useState("10")
+  const [industry, setIndustry] = useState(initialRun?.industry ?? "Piano & nhạc cụ phím")
+  const [market, setMarket] = useState(initialRun?.market ?? "Việt Nam")
+  const [period, setPeriod] = useState<`${PeriodDays}`>(`${initialRun?.periodDays ?? 30}` as `${PeriodDays}`)
+  const [count, setCount] = useState(String(initialRun?.resultCount ?? 10))
   const [isRunning, setIsRunning] = useState(false)
-  const [hasRun, setHasRun] = useState(false)
-  const [results, setResults] = useState<DiscoveredTopic[]>([])
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+  const [hasRun, setHasRun] = useState(initialRun !== null)
+  const [results, setResults] = useState<DiscoveredTopic[]>(initialRun?.topics ?? [])
+  const [addedIds, setAddedIds] = useState<Set<string>>(() => getAddedTopicIds(initialRun?.topics ?? []))
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
@@ -103,6 +130,75 @@ export default function TopicDiscovery({ apiClient, workspaceId, onNavigate, onA
   const [autoFrequency, setAutoFrequency] = useState("weekly")
   const [autoCount, setAutoCount] = useState("10")
   const [autoAddToQueue, setAutoAddToQueue] = useState(false)
+
+  useEffect(() => {
+    if (initialRun === null) {
+      return
+    }
+
+    setIndustry(initialRun.industry ?? "Piano & nhạc cụ phím")
+    setMarket(initialRun.market ?? "Việt Nam")
+    setPeriod(`${initialRun.periodDays ?? 30}` as `${PeriodDays}`)
+    setCount(String(initialRun.resultCount))
+    setResults(initialRun.topics)
+    setAddedIds(getAddedTopicIds(initialRun.topics))
+    setHasRun(true)
+  }, [initialRun])
+
+  useEffect(() => {
+    if (initialRun !== null) {
+      return
+    }
+
+    let isActive = true
+    setIsRunning(true)
+    setError(null)
+
+    const applyRun = (run: DiscoveryRun) => {
+      if (!isActive) {
+        return
+      }
+
+      setIndustry(run.industry ?? "Piano & nhạc cụ phím")
+      setMarket(run.market ?? "Việt Nam")
+      setPeriod(`${run.periodDays ?? 30}` as `${PeriodDays}`)
+      setCount(String(run.resultCount))
+      setResults(run.topics)
+      setAddedIds(getAddedTopicIds(run.topics))
+      setHasRun(true)
+      onRunChange?.(run)
+      window.localStorage.setItem(getStorageKey(workspaceId), run.id)
+    }
+
+    const runId = window.localStorage.getItem(getStorageKey(workspaceId))
+    getLatestDiscoveryRun(apiClient, workspaceId)
+      .catch(() => {
+        if (runId === null) {
+          return null
+        }
+
+        return getDiscoveryRun(apiClient, workspaceId, runId)
+      })
+      .then((run) => {
+        if (run !== null) {
+          applyRun(run)
+        }
+      })
+      .catch((restoreError: unknown) => {
+        if (isActive) {
+          setError(getErrorMessage(restoreError))
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsRunning(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [apiClient, initialRun, onRunChange, workspaceId])
 
   const handleDiscover = async () => {
     setIsRunning(true)
@@ -119,7 +215,10 @@ export default function TopicDiscovery({ apiClient, workspaceId, onNavigate, onA
         resultCount: Number(count),
       })
       setResults(run.topics)
+      setAddedIds(getAddedTopicIds(run.topics))
       setHasRun(true)
+      onRunChange?.(run)
+      window.localStorage.setItem(getStorageKey(workspaceId), run.id)
       if (run.status === "failed") {
         setError(run.errorMessage ?? "AI chưa tạo được chủ đề. Vui lòng thử lại.")
       }
@@ -139,6 +238,19 @@ export default function TopicDiscovery({ apiClient, workspaceId, onNavigate, onA
     try {
       const topic = await addDiscoveredTopicToQueue(apiClient, workspaceId, id)
       setAddedIds((current) => new Set([...current, id]))
+      setResults((currentResults) =>
+        currentResults.map((currentTopic) =>
+          currentTopic.id === id ? { ...currentTopic, topicId: topic.id } : currentTopic,
+        ),
+      )
+      if (initialRun !== null) {
+        onRunChange?.({
+          ...initialRun,
+          topics: initialRun.topics.map((currentTopic) =>
+            currentTopic.id === id ? { ...currentTopic, topicId: topic.id } : currentTopic,
+          ),
+        })
+      }
       onAddToQueue?.(topic)
       toastKey.current += 1
       setToastMsg(topic.title)

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { generateBriefWithAgent } from "../../api/agent"
+import { generateBrief } from "../../api/briefs"
 import type { ApiClient } from "../../api/client"
 import { getErrorMessage } from "../../api/errors"
 import type { Topic } from "../../types/domain"
@@ -105,7 +105,7 @@ export default function TopicsQueue({
     setGeneratingBriefIds((current) => new Set([...current, topic.id]))
 
     try {
-      await generateBriefWithAgent(apiClient, workspaceId, {
+      await generateBrief(apiClient, workspaceId, {
         topicId: topic.id,
         industry: "Piano & nhạc cụ phím",
         market: "Việt Nam",
@@ -113,11 +113,7 @@ export default function TopicsQueue({
         searchIntent: `Tìm hiểu và ra quyết định về ${topic.title}`,
         angle: topic.priority === "high" ? "Tập trung vào nhu cầu mua hàng có tín hiệu cao" : "Hướng dẫn thực tế theo nhu cầu người đọc",
         businessGoal: "Tạo nội dung có khả năng hỗ trợ tư vấn và chuyển đổi khách hàng",
-        researchInsights: [
-          `Chủ đề: ${topic.title}`,
-          topic.opportunityScore !== undefined ? `Điểm cơ hội: ${topic.opportunityScore}/100` : "Chưa có điểm cơ hội",
-          topic.priority !== undefined ? `Mức ưu tiên: ${topic.priority}` : "Chưa có mức ưu tiên",
-        ].join("\n"),
+        researchInsights: buildResearchInsights(topic),
       })
       setActionMessage(`Đã tạo brief cho “${topic.title}”.`)
       onNavigate("briefs")
@@ -149,7 +145,7 @@ export default function TopicsQueue({
       subtitle={`${allTopics.length} chủ đề · ${pendingCount(allTopics)} đang chờ`}
       actions={!isMobile ? headerActions : undefined}
     >
-      {isLoading ? <div className={s.emptyState}>Đang tải chủ đề...</div> : null}
+      {isLoading && allTopics.length === 0 ? <div className={s.emptyState}>Đang tải chủ đề...</div> : null}
       {error ? <div className={s.emptyState}>{error}</div> : null}
       {actionError ? <div className={s.emptyState}>{actionError}</div> : null}
       {actionMessage ? <div className={s.emptyState}>{actionMessage}</div> : null}
@@ -169,7 +165,7 @@ export default function TopicsQueue({
               onClick={() => setFilter(item.value)}
               className={`${s.filterBtn} ${filter === item.value ? s.filterBtnActive : ""}`}
             >
-              {item.label}
+              {item.label} <span className={s.filterCount}>{countForFilter(allTopics, item.value)}</span>
             </button>
           ))}
         </div>
@@ -286,6 +282,54 @@ export default function TopicsQueue({
 
 function pendingCount(topics: Topic[]) {
   return topics.filter((topic) => topic.status === "pending").length
+}
+
+function countForFilter(topics: Topic[], filter: Topic["status"] | "all"): number {
+  if (filter === "all") {
+    return topics.length
+  }
+
+  return topics.filter((topic) => topic.status === filter).length
+}
+
+function buildResearchInsights(topic: Topic): string {
+  const parts = [
+    `Chủ đề: ${topic.title}`,
+    topic.opportunityScore !== undefined ? `Điểm cơ hội: ${topic.opportunityScore}/100` : "Chưa có điểm cơ hội",
+    topic.priority !== undefined ? `Mức ưu tiên: ${topic.priority}` : "Chưa có mức ưu tiên",
+  ]
+
+  if (topic.researchPlan) {
+    parts.push(`Mục tiêu nghiên cứu: ${topic.researchPlan.objective}`)
+    parts.push(`Cách tiếp cận: ${topic.researchPlan.approach}`)
+  }
+
+  if (topic.findings?.length) {
+    parts.push("Phát hiện chính:")
+    topic.findings.slice(0, 6).forEach((finding) => {
+      parts.push(`- ${finding.claim}`)
+    })
+  }
+
+  if (topic.sources?.length) {
+    parts.push("Nguồn tham khảo:")
+    topic.sources.slice(0, 6).forEach((source) => {
+      parts.push(`- ${source.title} (${source.domain}): ${source.extractedInfo}`)
+    })
+  }
+
+  if (topic.gaps?.length) {
+    parts.push("Khoảng trống nội dung:")
+    topic.gaps.slice(0, 4).forEach((gap) => {
+      parts.push(`- ${gap.description}`)
+    })
+  }
+
+  if (topic.opportunity) {
+    parts.push(`Khuyến nghị cơ hội: ${topic.opportunity.recommendation}`)
+  }
+
+  return parts.join("\n")
 }
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {

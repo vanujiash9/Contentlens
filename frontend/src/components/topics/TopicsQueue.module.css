@@ -106,6 +106,17 @@
   color: var(--text-strong);
 }
 
+.filterCount {
+  margin-left: 4px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.filterBtnActive .filterCount {
+  color: var(--primary);
+}
+
 .filterBtnActive,
 .filterBtnActive:hover {
   border-color: var(--primary-border);

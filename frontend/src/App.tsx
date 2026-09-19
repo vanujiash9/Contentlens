@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ApiClient } from "./api/client"
 import { getErrorMessage } from "./api/errors"
+import { listBriefs, type BriefSummary } from "./api/briefs"
 import { createTopics, listTopics } from "./api/topics"
 import { getCurrentUser, type WorkspaceSummaryDto } from "./api/workspaces"
 import { useAuth } from "./auth/AuthProvider"
@@ -15,6 +16,7 @@ import AddTopics from "./components/topics/AddTopics"
 import ContentBriefs from "./components/briefs/ContentBriefs"
 import TopicDiscovery from "./components/discovery/TopicDiscovery"
 import { useIsMobile } from "./hooks/useIsMobile"
+import type { DiscoveryRun } from "./api/discovery"
 import type { Topic } from "./types/domain"
 type View = "overview" | "topics" | "briefs" | "add-topics" | "discovery" | `topic-${string}`
 
@@ -77,6 +79,8 @@ export default function App() {
   const [workspaces, setWorkspaces] = useState<WorkspaceSummaryDto[]>([])
   const [workspaceId, setWorkspaceId] = useState<string | null>(null)
   const [topics, setTopics] = useState<Topic[]>([])
+  const [briefs, setBriefs] = useState<BriefSummary[]>([])
+  const [latestDiscoveryRun, setLatestDiscoveryRun] = useState<DiscoveryRun | null>(null)
   const [isDataLoading, setIsDataLoading] = useState(false)
   const [dataError, setDataError] = useState<string | null>(null)
 
@@ -88,6 +92,8 @@ export default function App() {
       setWorkspaces([])
       setWorkspaceId(null)
       setTopics([])
+      setBriefs([])
+      setLatestDiscoveryRun(null)
       return
     }
 
@@ -126,17 +132,24 @@ export default function App() {
   useEffect(() => {
     if (workspaceId === null) {
       setTopics([])
+      setBriefs([])
+      setLatestDiscoveryRun(null)
       return
     }
+
+    setLatestDiscoveryRun((currentRun) =>
+      currentRun?.workspaceId === workspaceId ? currentRun : null,
+    )
 
     let isActive = true
     setIsDataLoading(true)
     setDataError(null)
 
-    listTopics(apiClient, workspaceId)
-      .then((nextTopics) => {
+    Promise.all([listTopics(apiClient, workspaceId), listBriefs(apiClient, workspaceId)])
+      .then(([nextTopics, nextBriefs]) => {
         if (isActive) {
           setTopics(nextTopics)
+          setBriefs(nextBriefs)
         }
       })
       .catch((error: unknown) => {
@@ -154,6 +167,18 @@ export default function App() {
       isActive = false
     }
   }, [apiClient, workspaceId])
+
+  const mergeTopic = useCallback((topic: Topic) => {
+    setTopics((currentTopics) => {
+      if (currentTopics.some((currentTopic) => currentTopic.id === topic.id)) {
+        return currentTopics.map((currentTopic) =>
+          currentTopic.id === topic.id ? topic : currentTopic,
+        )
+      }
+
+      return [topic, ...currentTopics]
+    })
+  }, [])
 
   if (isAuthLoading) {
     return <div className={s.app}>Đang tải phiên đăng nhập...</div>
@@ -189,13 +214,7 @@ export default function App() {
   }
 
   const handleAddFromDiscovery = (topic: Topic) => {
-    setTopics((currentTopics) => {
-      if (currentTopics.some((currentTopic) => currentTopic.id === topic.id)) {
-        return currentTopics
-      }
-
-      return [topic, ...currentTopics]
-    })
+    mergeTopic(topic)
   }
 
   const renderContent = () => {
@@ -212,7 +231,7 @@ export default function App() {
     }
 
     if (view === "overview") {
-      return <Overview onNavigate={navigate} topics={topics} />
+      return <Overview onNavigate={navigate} topics={topics} briefs={briefs} />
     }
 
     if (view === "topics") {
@@ -244,7 +263,14 @@ export default function App() {
         return <div className={s.content}>Workspace chưa sẵn sàng.</div>
       }
 
-      return <ContentBriefs apiClient={apiClient} workspaceId={workspaceId} onNavigate={navigate} />
+      return (
+        <ContentBriefs
+          apiClient={apiClient}
+          workspaceId={workspaceId}
+          onNavigate={navigate}
+          onBriefsChange={setBriefs}
+        />
+      )
     }
 
     if (view === "discovery") {
@@ -258,6 +284,8 @@ export default function App() {
           workspaceId={workspaceId}
           onNavigate={navigate}
           onAddToQueue={handleAddFromDiscovery}
+          initialRun={latestDiscoveryRun}
+          onRunChange={setLatestDiscoveryRun}
         />
       )
     }
@@ -265,9 +293,12 @@ export default function App() {
     if (view.startsWith("topic-")) {
       return (
         <TopicDetail
+          apiClient={apiClient}
+          workspaceId={workspaceId ?? ""}
           topicId={view.replace("topic-", "")}
           topics={topics}
           onNavigate={navigate}
+          onTopicChange={mergeTopic}
         />
       )
     }

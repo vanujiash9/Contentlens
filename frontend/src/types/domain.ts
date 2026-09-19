@@ -120,4 +120,6 @@ export interface DiscoveredTopic {
   businessRelevance: SignalDetail
   angle: string
   reasoning: string
+  addedToQueueAt?: string
+  topicId?: string
 }

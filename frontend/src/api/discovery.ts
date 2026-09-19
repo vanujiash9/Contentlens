@@ -85,6 +85,27 @@ export async function createDiscoveryRun(
   return mapDiscoveryRun(response)
 }
 
+export async function listDiscoveryRuns(
+  apiClient: ApiClient,
+  workspaceId: string,
+  limit = 10,
+): Promise<DiscoveryRun[]> {
+  const response = await apiClient.request<{ runs: DiscoveryRunDto[] }>(
+    `/api/v1/workspaces/${workspaceId}/discovery-runs?limit=${limit}`,
+  )
+  return response.runs.map(mapDiscoveryRun)
+}
+
+export async function getLatestDiscoveryRun(
+  apiClient: ApiClient,
+  workspaceId: string,
+): Promise<DiscoveryRun> {
+  const response = await apiClient.request<DiscoveryRunDto>(
+    `/api/v1/workspaces/${workspaceId}/discovery-runs/latest`,
+  )
+  return mapDiscoveryRun(response)
+}
+
 export async function getDiscoveryRun(
   apiClient: ApiClient,
   workspaceId: string,
@@ -136,6 +157,8 @@ function mapDiscoveredTopic(dto: DiscoveredTopicDto): DiscoveredTopic {
     businessRelevance: mapSignal(dto.business_relevance),
     angle: dto.angle ?? "",
     reasoning: dto.reasoning ?? "",
+    addedToQueueAt: dto.added_to_queue_at ?? undefined,
+    topicId: dto.topic_id ?? undefined,
   }
 }
 

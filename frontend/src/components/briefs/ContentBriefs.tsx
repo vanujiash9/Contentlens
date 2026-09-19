@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react"
-import { listBriefs, type BriefSummary } from "../../api/briefs"
+import {
+  approveBrief,
+  listBriefs,
+  requestBriefRevision,
+  saveBriefDraft,
+  type BriefSummary,
+} from "../../api/briefs"
 import type { ApiClient } from "../../api/client"
 import { getErrorMessage } from "../../api/errors"
 import type { ContentBrief, Topic } from "../../types/domain"
@@ -12,9 +18,10 @@ interface ContentBriefsProps {
   apiClient: ApiClient
   workspaceId: string
   onNavigate: (view: string) => void
+  onBriefsChange?: (briefs: BriefSummary[]) => void
 }
 
-type BriefTopic = Topic & { brief: ContentBrief }
+type BriefTopic = Topic & { brief: BriefSummary }
 
 type ReviewStatus = "pending_review" | "approved"
 
@@ -200,12 +207,18 @@ function RenderMd({ text }: { text: string }) {
 
 function BriefViewer({
   topic,
+  apiClient,
+  workspaceId,
   onClose,
+  onBriefChange,
   onStatusChange,
   existingApprovedAt,
 }: {
   topic: BriefTopic
+  apiClient: ApiClient
+  workspaceId: string
   onClose: () => void
+  onBriefChange: (brief: BriefSummary) => void
   onStatusChange?: (id: string, status: ReviewStatus, at?: string) => void
   existingApprovedAt?: string
 }) {
@@ -222,12 +235,76 @@ function BriefViewer({
   const [draftText, setDraftText] = useState(brief.draft ?? "")
   const [savedDraft, setSavedDraft] = useState(brief.draft ?? "")
   const [revisionRequest, setRevisionRequest] = useState("")
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [isApproving, setIsApproving] = useState(false)
+  const [isRequestingRevision, setIsRequestingRevision] = useState(false)
 
-  const handleApprove = () => {
-    const now = new Date().toISOString()
-    setApprovedAt(now)
-    setReviewState("approved")
-    onStatusChange?.(topic.id, "approved", now)
+  const applyServerBrief = (nextBrief: BriefSummary) => {
+    onBriefChange(nextBrief)
+    setDraftText(nextBrief.draft ?? "")
+    setSavedDraft(nextBrief.draft ?? "")
+    const nextStatus = nextBrief.reviewStatus === "approved" ? "approved" : "idle"
+    setReviewState(nextStatus)
+    setApprovedAt(nextBrief.approvedAt)
+    onStatusChange?.(
+      nextBrief.id,
+      nextBrief.reviewStatus === "approved" ? "approved" : "pending_review",
+      nextBrief.approvedAt,
+    )
+  }
+
+  const handleSaveDraft = async () => {
+    setActionError(null)
+    setIsSavingDraft(true)
+    try {
+      const nextBrief = await saveBriefDraft(
+        apiClient,
+        workspaceId,
+        brief.id,
+        draftText,
+        brief.version,
+      )
+      applyServerBrief(nextBrief)
+      setIsEditingDraft(false)
+    } catch (saveError: unknown) {
+      setActionError(getErrorMessage(saveError))
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
+
+  const handleApprove = async () => {
+    setActionError(null)
+    setIsApproving(true)
+    try {
+      const nextBrief = await approveBrief(apiClient, workspaceId, brief.id)
+      applyServerBrief(nextBrief)
+    } catch (approveError: unknown) {
+      setActionError(getErrorMessage(approveError))
+    } finally {
+      setIsApproving(false)
+    }
+  }
+
+  const handleRequestRevision = async () => {
+    setActionError(null)
+    setIsRequestingRevision(true)
+    try {
+      const nextBrief = await requestBriefRevision(
+        apiClient,
+        workspaceId,
+        brief.id,
+        revisionRequest,
+        brief.version,
+      )
+      setRevisionRequest("")
+      applyServerBrief(nextBrief)
+    } catch (revisionError: unknown) {
+      setActionError(getErrorMessage(revisionError))
+    } finally {
+      setIsRequestingRevision(false)
+    }
   }
 
   return (
@@ -425,10 +502,8 @@ function BriefViewer({
             {isEditingDraft ? (
               <>
                 <button
-                  onClick={() => {
-                    setSavedDraft(draftText)
-                    setIsEditingDraft(false)
-                  }}
+                  onClick={handleSaveDraft}
+                  disabled={isSavingDraft}
                   style={{
                     padding: "4px 12px",
                     background: "#2563eb",
@@ -441,7 +516,7 @@ function BriefViewer({
                     fontFamily: "inherit",
                   }}
                 >
-                  Lưu
+                  {isSavingDraft ? "Đang lưu..." : "Lưu"}
                 </button>
                 <button
                   onClick={() => {
@@ -510,10 +585,27 @@ function BriefViewer({
         )}
       </div>
 
+      {actionError && (
+        <div
+          style={{
+            padding: "10px 14px",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 6,
+            color: "#b91c1c",
+            fontSize: 12,
+            marginBottom: 10,
+          }}
+        >
+          {actionError}
+        </div>
+      )}
+
       {reviewState === "idle" && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             onClick={handleApprove}
+            disabled={isApproving}
             style={{
               padding: "9px 20px",
               background: "#16a34a",
@@ -526,10 +618,11 @@ function BriefViewer({
               fontFamily: "inherit",
             }}
           >
-            ✓ Duyệt
+            {isApproving ? "Đang duyệt..." : "✓ Duyệt"}
           </button>
           <button
             onClick={() => setReviewState("requesting")}
+            disabled={isSavingDraft || isApproving}
             style={{
               padding: "9px 16px",
               background: "#fff",
@@ -544,7 +637,8 @@ function BriefViewer({
             Yêu cầu AI sửa
           </button>
           <button
-            onClick={() => setSavedDraft(draftText)}
+            onClick={handleSaveDraft}
+            disabled={isSavingDraft}
             style={{
               padding: "9px 16px",
               background: "#fff",
@@ -556,7 +650,7 @@ function BriefViewer({
               fontFamily: "inherit",
             }}
           >
-            Lưu nháp
+            {isSavingDraft ? "Đang lưu..." : "Lưu nháp"}
           </button>
         </div>
       )}
@@ -604,7 +698,8 @@ function BriefViewer({
           />
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button
-              onClick={() => setReviewState("idle")}
+              onClick={handleRequestRevision}
+              disabled={isRequestingRevision || revisionRequest.trim().length === 0}
               style={{
                 padding: "8px 14px",
                 background: "#2563eb",
@@ -617,7 +712,7 @@ function BriefViewer({
                 fontFamily: "inherit",
               }}
             >
-              Gửi yêu cầu
+              {isRequestingRevision ? "Đang sửa..." : "Gửi yêu cầu"}
             </button>
             <button
               onClick={() => {
@@ -679,7 +774,7 @@ function BriefViewer({
   )
 }
 
-export default function ContentBriefs({ apiClient, workspaceId, onNavigate }: ContentBriefsProps) {
+export default function ContentBriefs({ apiClient, workspaceId, onNavigate, onBriefsChange }: ContentBriefsProps) {
   const isMobile = useIsMobile()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] =
@@ -701,10 +796,20 @@ export default function ContentBriefs({ apiClient, workspaceId, onNavigate }: Co
           return
         }
         setBriefs(nextBriefs)
+        onBriefsChange?.(nextBriefs)
         setReviewStatuses((current) => {
           const next = { ...current }
           nextBriefs.forEach((brief) => {
             next[brief.id] = brief.reviewStatus === "approved" ? "approved" : "pending_review"
+          })
+          return next
+        })
+        setApprovalTimes((current) => {
+          const next = { ...current }
+          nextBriefs.forEach((brief) => {
+            if (brief.approvedAt) {
+              next[brief.id] = brief.approvedAt
+            }
           })
           return next
         })
@@ -723,7 +828,7 @@ export default function ContentBriefs({ apiClient, workspaceId, onNavigate }: Co
     return () => {
       isActive = false
     }
-  }, [apiClient, workspaceId])
+  }, [apiClient, onBriefsChange, workspaceId])
 
   const topicsWithBriefs: BriefTopic[] = briefs.map((brief) => ({
     id: brief.id,
@@ -748,11 +853,26 @@ export default function ContentBriefs({ apiClient, workspaceId, onNavigate }: Co
       return (
         <BriefViewer
           topic={topic}
+          apiClient={apiClient}
+          workspaceId={workspaceId}
           onClose={() => setSelectedId(null)}
-          existingApprovedAt={approvalTimes[topic.id]}
+          existingApprovedAt={approvalTimes[topic.id] ?? topic.brief.approvedAt}
+          onBriefChange={(nextBrief) => {
+            setBriefs((current) => {
+              const next = current.map((brief) => (brief.id === nextBrief.id ? nextBrief : brief))
+              onBriefsChange?.(next)
+              return next
+            })
+          }}
           onStatusChange={(id, status, at) => {
             setReviewStatuses((p) => ({ ...p, [id]: status }))
-            if (at) setApprovalTimes((p) => ({ ...p, [id]: at }))
+            setApprovalTimes((current) => {
+              if (at) {
+                return { ...current, [id]: at }
+              }
+              const { [id]: _removed, ...next } = current
+              return next
+            })
           }}
         />
       )

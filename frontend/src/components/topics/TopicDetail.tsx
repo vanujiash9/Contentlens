@@ -1,13 +1,19 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import type { ApiClient } from "../../api/client"
+import { getErrorMessage } from "../../api/errors"
+import { getTopicDetail } from "../../api/topics"
 import type { Topic } from "../../types/domain"
 import { colors } from "../../styles/tokens"
 import PageShell from "../ui/PageShell"
 import s from "./TopicDetail.module.css"
 
 interface TopicDetailProps {
+  apiClient: ApiClient
+  workspaceId: string
   topicId: string
   topics: Topic[]
   onNavigate: (view: string) => void
+  onTopicChange: (topic: Topic) => void
 }
 
 type TabId = "overview" | "sources"
@@ -119,9 +125,53 @@ function SourcesTab({ topic }: { topic: Topic }) {
   )
 }
 
-export default function TopicDetail({ topicId, topics, onNavigate }: TopicDetailProps) {
-  const topic = topics.find((item) => item.id === topicId)
+export default function TopicDetail({
+  apiClient,
+  workspaceId,
+  topicId,
+  topics,
+  onNavigate,
+  onTopicChange,
+}: TopicDetailProps) {
+  const fallbackTopic = topics.find((item) => item.id === topicId)
+  const [topic, setTopic] = useState<Topic | undefined>(fallbackTopic)
   const [tab, setTab] = useState<TabId>("overview")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setTopic((current) => current ?? fallbackTopic)
+  }, [fallbackTopic])
+
+  useEffect(() => {
+    let isActive = true
+    setIsLoading(true)
+    setError(null)
+
+    getTopicDetail(apiClient, workspaceId, topicId)
+      .then((nextTopic) => {
+        if (!isActive) {
+          return
+        }
+
+        setTopic(nextTopic)
+        onTopicChange(nextTopic)
+      })
+      .catch((loadError: unknown) => {
+        if (isActive) {
+          setError(getErrorMessage(loadError))
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [apiClient, workspaceId, topicId, onTopicChange])
 
   if (!topic) return <div className={s.emptyState}>Topic không tồn tại.</div>
 
@@ -170,6 +220,8 @@ export default function TopicDetail({ topicId, topics, onNavigate }: TopicDetail
       </div>
 
       <main className={s.content}>
+        {isLoading ? <div className={s.emptyState}>Đang tải dữ liệu nghiên cứu...</div> : null}
+        {error ? <div className={s.emptyState}>{error}</div> : null}
         {tab === "overview"
           ? <OverviewTab topic={topic} onNavigate={onNavigate} />
           : <SourcesTab topic={topic} />}

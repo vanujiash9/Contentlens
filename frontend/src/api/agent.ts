@@ -58,10 +58,16 @@ function mapAgentBriefResult(result: unknown): BriefSummary {
     key_questions: unknown[]
     outline: unknown[]
     key_facts: unknown[]
+    draft: string | null
     must_cover: unknown[]
     must_avoid: unknown[]
     evidence_map: unknown[]
     review_status: string
+    approved_at: string | null
+    word_count: number
+    sources_used: number
+    total_claims: number
+    cited_claims: number
     quality_checks: unknown[]
     quality_warnings: unknown[]
     created_at: string
@@ -90,7 +96,7 @@ function mapAgentBriefResult(result: unknown): BriefSummary {
       return { section: String(item), description: "" }
     }),
     keyFacts: dto.key_facts.map(String),
-    draft: "",
+    draft: dto.draft ?? "",
     mustCover: dto.must_cover.map(String),
     mustAvoid: dto.must_avoid.map(String),
     evidenceMap: dto.evidence_map.map((item) => {
@@ -105,14 +111,15 @@ function mapAgentBriefResult(result: unknown): BriefSummary {
       return { section: String(item), claimIds: [] }
     }),
     contentQuality: {
-      wordCount: 0,
-      sourcesUsed: 0,
-      totalClaims: 0,
-      citedClaims: 0,
+      wordCount: dto.word_count,
+      sourcesUsed: dto.sources_used,
+      totalClaims: dto.total_claims,
+      citedClaims: dto.cited_claims,
       checks: dto.quality_checks.map((check) => ({ label: String(check), ok: true })),
       warnings: dto.quality_warnings.map(String),
     },
     reviewStatus: dto.review_status,
+    approvedAt: dto.approved_at ?? undefined,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
     version: dto.version,
