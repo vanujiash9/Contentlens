@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { generateBrief } from "../../api/briefs"
 import type { ApiClient } from "../../api/client"
+import { retryTopic, startTopic } from "../../api/topics"
 import { getErrorMessage } from "../../api/errors"
 import type { Topic } from "../../types/domain"
 import { useIsMobile } from "../../hooks/useIsMobile"
@@ -14,6 +15,7 @@ interface TopicsQueueProps {
   topics: Topic[]
   isLoading?: boolean
   error?: string | null
+  onTopicChange?: (topic: Topic) => void
 }
 
 const FILTERS: { value: Topic["status"] | "all"; label: string }[] = [
@@ -75,11 +77,13 @@ export default function TopicsQueue({
   topics,
   isLoading = false,
   error = null,
+  onTopicChange,
 }: TopicsQueueProps) {
   const isMobile = useIsMobile()
   const [filter, setFilter] = useState<Topic["status"] | "all">("all")
   const [search, setSearch] = useState("")
   const [generatingBriefIds, setGeneratingBriefIds] = useState<Set<string>>(new Set())
+  const [researchingTopicIds, setResearchingTopicIds] = useState<Set<string>>(new Set())
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -93,6 +97,52 @@ export default function TopicsQueue({
 
   const openTopic = (topic: Topic) => {
     if (topic.status === "completed") onNavigate(`topic-${topic.id}`)
+  }
+
+  const handleStartResearch = async (topic: Topic) => {
+    if (workspaceId.length === 0 || researchingTopicIds.has(topic.id)) {
+      return
+    }
+
+    setActionError(null)
+    setActionMessage(null)
+    setResearchingTopicIds((current) => new Set([...current, topic.id]))
+    try {
+      const nextTopic = await startTopic(apiClient, workspaceId, topic.id)
+      onTopicChange?.(nextTopic)
+      setActionMessage(`Đã nghiên cứu xong “${topic.title}”.`)
+    } catch (researchError: unknown) {
+      setActionError(getErrorMessage(researchError))
+    } finally {
+      setResearchingTopicIds((current) => {
+        const next = new Set(current)
+        next.delete(topic.id)
+        return next
+      })
+    }
+  }
+
+  const handleRetryResearch = async (topic: Topic) => {
+    if (workspaceId.length === 0 || researchingTopicIds.has(topic.id)) {
+      return
+    }
+
+    setActionError(null)
+    setActionMessage(null)
+    setResearchingTopicIds((current) => new Set([...current, topic.id]))
+    try {
+      const nextTopic = await retryTopic(apiClient, workspaceId, topic.id)
+      onTopicChange?.(nextTopic)
+      setActionMessage(`Đã nghiên cứu lại “${topic.title}”.`)
+    } catch (researchError: unknown) {
+      setActionError(getErrorMessage(researchError))
+    } finally {
+      setResearchingTopicIds((current) => {
+        const next = new Set(current)
+        next.delete(topic.id)
+        return next
+      })
+    }
   }
 
   const handleGenerateBrief = async (topic: Topic) => {
@@ -203,8 +253,11 @@ export default function TopicsQueue({
                 <TopicActions
                   topic={topic}
                   isGeneratingBrief={generatingBriefIds.has(topic.id)}
+                  isResearching={researchingTopicIds.has(topic.id)}
                   onOpen={() => onNavigate(`topic-${topic.id}`)}
                   onGenerateBrief={() => void handleGenerateBrief(topic)}
+                  onStartResearch={() => void handleStartResearch(topic)}
+                  onRetryResearch={() => void handleRetryResearch(topic)}
                 />
               </article>
             ))
@@ -268,8 +321,11 @@ export default function TopicsQueue({
                 <TopicActions
                   topic={topic}
                   isGeneratingBrief={generatingBriefIds.has(topic.id)}
+                  isResearching={researchingTopicIds.has(topic.id)}
                   onOpen={() => onNavigate(`topic-${topic.id}`)}
                   onGenerateBrief={() => void handleGenerateBrief(topic)}
+                  onStartResearch={() => void handleStartResearch(topic)}
+                  onRetryResearch={() => void handleRetryResearch(topic)}
                 />
               </div>
             ))
@@ -347,25 +403,64 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 function TopicActions({
   topic,
   isGeneratingBrief,
+  isResearching,
   onOpen,
   onGenerateBrief,
+  onStartResearch,
+  onRetryResearch,
 }: {
   topic: Topic
   isGeneratingBrief: boolean
+  isResearching: boolean
   onOpen: () => void
   onGenerateBrief: () => void
+  onStartResearch: () => void
+  onRetryResearch: () => void
 }) {
+  if (topic.status === "processing") {
+    return (
+      <div className={s.actions}>
+        <button className={s.actionBtn} disabled>
+          Đang nghiên cứu…
+        </button>
+      </div>
+    )
+  }
+
+  if (topic.status === "pending") {
+    return (
+      <div className={s.actions}>
+        <button className={s.actionBtn} onClick={onStartResearch} disabled={isResearching}>
+          {isResearching ? "Đang nghiên cứu…" : "Bắt đầu nghiên cứu"}
+        </button>
+        <button className={s.actionBtn} onClick={onGenerateBrief} disabled={isGeneratingBrief}>
+          {isGeneratingBrief ? "Đang tạo..." : "Tạo brief nhanh"}
+        </button>
+      </div>
+    )
+  }
+
+  if (topic.status === "failed") {
+    return (
+      <div className={s.actions}>
+        <button className={s.actionBtn} onClick={onRetryResearch} disabled={isResearching}>
+          {isResearching ? "Đang thử lại…" : "Thử lại"}
+        </button>
+        <button className={s.actionBtn} onClick={onGenerateBrief} disabled={isGeneratingBrief}>
+          {isGeneratingBrief ? "Đang tạo..." : "Tạo brief nhanh"}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className={s.actions}>
-      {topic.status === "completed" ? (
-        <button className={s.actionBtn} onClick={onOpen}>
-          Xem
-        </button>
-      ) : null}
+      <button className={s.actionBtn} onClick={onOpen}>
+        Xem research
+      </button>
       <button className={s.actionBtn} onClick={onGenerateBrief} disabled={isGeneratingBrief}>
         {isGeneratingBrief ? "Đang tạo..." : "Tạo brief"}
       </button>
-      {topic.status !== "completed" ? <span className={s.emptyValue}>Đang chờ API xử lý</span> : null}
     </div>
   )
 }

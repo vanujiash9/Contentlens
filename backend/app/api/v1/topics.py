@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 
 from app.api.dependencies import get_current_user, get_openai_client
-from app.core.security import AuthenticatedUser
-from app.integrations.openai_client import OpenAIClient
-from app.core.supabase import get_supabase_client
 from app.core.config import Settings, get_settings
+from app.core.security import AuthenticatedUser
+from app.core.supabase import get_supabase_client
+from app.integrations.openai_client import OpenAIClient
 from app.integrations.search_provider import SearchProviderNotConfiguredError, get_search_provider
 from app.integrations.source_fetcher import get_source_fetcher
 from app.repositories.research import ResearchRepository
@@ -39,6 +39,7 @@ def get_topic_service(
             search_provider=get_search_provider(settings),
             source_fetcher=get_source_fetcher(settings),
             analysis_provider=ai_client,
+            source_fetch_limit=settings.research_source_fetch_limit,
         )
     except SearchProviderNotConfiguredError:
         research_workflow = None

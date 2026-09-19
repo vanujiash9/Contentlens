@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.ai.provider import AIProviderError, AIProviderInvalidResponseError, StructuredOutputProvider
+from app.ai.provider import (
+    AIProviderError,
+    AIProviderInvalidResponseError,
+    StructuredOutputProvider,
+)
 from app.integrations.search_provider import (
     SearchProvider,
     SearchProviderError,
     SearchProviderNotConfiguredError,
 )
-from app.integrations.source_fetcher import SourceFetchError, SourceFetcher
+from app.integrations.source_fetcher import SourceFetcher, SourceFetchError
 from app.prompts import research_analysis
 from app.repositories.research import ResearchRepository
 from app.schemas.research import ResearchAnalysisGeneration, ResearchPlan
@@ -45,11 +49,13 @@ class RunResearchStep:
         search_provider: SearchProvider,
         source_fetcher: SourceFetcher,
         analysis_provider: StructuredOutputProvider | None = None,
+        source_fetch_limit: int = SOURCE_FETCH_LIMIT,
     ) -> None:
         self.research_repository = research_repository
         self.search_provider = search_provider
         self.source_fetcher = source_fetcher
         self.analysis_provider = analysis_provider
+        self.source_fetch_limit = max(1, source_fetch_limit)
 
     def execute(self, context: WorkflowContext) -> ResearchWorkflowResult:
         request = ResearchWorkflowInput(**context.input)
@@ -79,7 +85,7 @@ class RunResearchStep:
         fetched_count = 0
         failed_count = 0
         fetched_source_ids: list[UUID] = []
-        for source in sources[:SOURCE_FETCH_LIMIT]:
+        for source in sources[: self.source_fetch_limit]:
             source_id = UUID(str(source["id"]))
             try:
                 fetched_source = self.source_fetcher.fetch(str(source["url"]))
@@ -110,10 +116,16 @@ class RunResearchStep:
             )
             self.research_repository.upsert_opportunity(
                 topic_id=request.topic_id,
-                opportunity=build_opportunity(request, fetched_count),
+                opportunity=build_opportunity(
+                    request,
+                    fetched_count,
+                    self.source_fetch_limit,
+                ),
             )
         else:
-            source_id_by_url = {str(source.get("url")): UUID(str(source["id"])) for source in sources}
+            source_id_by_url = {
+                str(source.get("url")): UUID(str(source["id"])) for source in sources
+            }
             self.research_repository.insert_findings(
                 topic_id=request.topic_id,
                 findings=build_ai_findings(analysis, source_id_by_url),
@@ -144,7 +156,7 @@ class RunResearchStep:
         if self.analysis_provider is None or not sources:
             return None
 
-        source_text = format_sources_for_analysis(sources[:SOURCE_FETCH_LIMIT])
+        source_text = format_sources_for_analysis(sources[: self.source_fetch_limit])
         if not source_text:
             return None
 
@@ -175,9 +187,18 @@ class ResearchWorkflow:
         search_provider: SearchProvider,
         source_fetcher: SourceFetcher,
         analysis_provider: StructuredOutputProvider | None = None,
+        source_fetch_limit: int = SOURCE_FETCH_LIMIT,
     ) -> None:
         self.runner = WorkflowRunner(
-            [RunResearchStep(research_repository, search_provider, source_fetcher, analysis_provider)]
+            [
+                RunResearchStep(
+                    research_repository,
+                    search_provider,
+                    source_fetcher,
+                    analysis_provider,
+                    source_fetch_limit,
+                )
+            ]
         )
 
     def run(
@@ -248,7 +269,11 @@ def build_ai_findings(
         {
             "claim": finding.claim,
             "finding_type": finding.finding_type,
-            "source_ids": [str(source_id_by_url[url]) for url in finding.source_urls if url in source_id_by_url],
+            "source_ids": [
+                str(source_id_by_url[url])
+                for url in finding.source_urls
+                if url in source_id_by_url
+            ],
             "metadata": {"generated_by": "ai_research_analysis"},
         }
         for finding in analysis.findings
@@ -278,9 +303,13 @@ def build_ai_opportunity(analysis: ResearchAnalysisGeneration) -> dict:
 
 
 def build_findings(request: ResearchWorkflowInput, source_ids: list[UUID]) -> list[dict]:
+    claim = (
+        f"Các nội dung cạnh tranh về {request.topic_title} thường cần giải thích rõ "
+        "nhu cầu người mua và tiêu chí lựa chọn."
+    )
     return [
         {
-            "claim": f"Các nội dung cạnh tranh về {request.topic_title} thường cần giải thích rõ nhu cầu người mua và tiêu chí lựa chọn.",
+            "claim": claim,
             "finding_type": "pattern",
             "source_ids": [str(source_id) for source_id in source_ids],
             "metadata": {"generated_by": "research_workflow"},
@@ -289,23 +318,44 @@ def build_findings(request: ResearchWorkflowInput, source_ids: list[UUID]) -> li
 
 
 def build_information_gaps(request: ResearchWorkflowInput) -> list[dict]:
+    description = (
+        f"Nên bổ sung checklist ra quyết định cụ thể cho {request.topic_title} "
+        "thay vì chỉ mô tả chung."
+    )
+    recommendation = "Thêm bảng tiêu chí, lỗi thường gặp và lời khuyên theo từng nhóm người đọc."
     return [
         {
-            "description": f"Nên bổ sung checklist ra quyết định cụ thể cho {request.topic_title} thay vì chỉ mô tả chung.",
-            "recommendation": "Thêm bảng tiêu chí, lỗi thường gặp và lời khuyên theo từng nhóm người đọc.",
+            "description": description,
+            "recommendation": recommendation,
         }
     ]
 
 
-def build_opportunity(request: ResearchWorkflowInput, fetched_count: int) -> dict:
+def build_opportunity(
+    request: ResearchWorkflowInput,
+    fetched_count: int,
+    source_fetch_limit: int,
+) -> dict:
     score = 75 if fetched_count > 0 else 55
     priority = "high" if score >= 70 else "medium"
+    recommendation = (
+        f"Tạo bài viết chuyên sâu về {request.topic_title} với checklist, so sánh "
+        "và hướng dẫn hành động."
+    )
+    warnings = []
+    if fetched_count < source_fetch_limit:
+        warnings.append(
+            f"Chỉ lấy được {fetched_count}/{source_fetch_limit} nguồn, cần kiểm chứng thêm."
+        )
+
     return {
         "score": score,
         "priority": priority,
-        "recommendation": f"Tạo bài viết chuyên sâu về {request.topic_title} với checklist, so sánh và hướng dẫn hành động.",
+        "recommendation": recommendation,
         "metadata": {
             "fetched_sources": fetched_count,
+            "source_fetch_limit": source_fetch_limit,
+            "warnings": warnings,
             "angle": "Hướng dẫn thực tế dựa trên phân tích nội dung cạnh tranh",
             "audience": request.market,
             "reasons": [

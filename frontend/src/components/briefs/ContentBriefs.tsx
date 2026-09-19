@@ -580,7 +580,13 @@ function BriefViewer({
           <div
             style={{ padding: "22px 26px", maxHeight: 480, overflowY: "auto" }}
           >
-            <RenderMd text={draftText} />
+            {draftText.trim().length > 0 ? (
+              <RenderMd text={draftText} />
+            ) : (
+              <div style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.6 }}>
+                Chưa có bản nháp đầy đủ. Hãy tạo lại brief hoặc dùng “Sửa tay” để bổ sung bài viết hoàn chỉnh.
+              </div>
+            )}
           </div>
         )}
       </div>

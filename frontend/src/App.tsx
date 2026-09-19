@@ -168,6 +168,22 @@ export default function App() {
     }
   }, [apiClient, workspaceId])
 
+  const hasProcessingTopics = topics.some((topic) => topic.status === "processing")
+
+  useEffect(() => {
+    if (workspaceId === null || !hasProcessingTopics) {
+      return undefined
+    }
+
+    const intervalId = window.setInterval(() => {
+      listTopics(apiClient, workspaceId)
+        .then(setTopics)
+        .catch((error: unknown) => setDataError(getErrorMessage(error)))
+    }, 5000)
+
+    return () => window.clearInterval(intervalId)
+  }, [apiClient, hasProcessingTopics, workspaceId])
+
   const mergeTopic = useCallback((topic: Topic) => {
     setTopics((currentTopics) => {
       if (currentTopics.some((currentTopic) => currentTopic.id === topic.id)) {
@@ -243,6 +259,7 @@ export default function App() {
           topics={topics}
           isLoading={isDataLoading}
           error={dataError}
+          onTopicChange={mergeTopic}
         />
       )
     }

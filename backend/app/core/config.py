@@ -29,7 +29,10 @@ class Settings(BaseSettings):
     search_base_url: AnyHttpUrl | None = Field(default=None, validation_alias="SEARCH__BASE_URL")
     search_result_limit: int = Field(default=10, validation_alias="SEARCH__RESULT_LIMIT")
     search_timeout_seconds: int = Field(default=20, validation_alias="SEARCH__TIMEOUT_SECONDS")
-    source_fetch_timeout_seconds: int = Field(default=20, validation_alias="SOURCE_FETCH__TIMEOUT_SECONDS")
+    source_fetch_timeout_seconds: int = Field(
+        default=20,
+        validation_alias="SOURCE_FETCH__TIMEOUT_SECONDS",
+    )
     source_fetch_max_characters: int = Field(
         default=30000,
         validation_alias="SOURCE_FETCH__MAX_CHARACTERS",
@@ -37,6 +40,10 @@ class Settings(BaseSettings):
     source_fetch_user_agent: str = Field(
         default="ContentLensBot/0.1 (+https://contentlens.local)",
         validation_alias="SOURCE_FETCH__USER_AGENT",
+    )
+    research_source_fetch_limit: int = Field(
+        default=5,
+        validation_alias="RESEARCH__SOURCE_FETCH_LIMIT",
     )
 
 

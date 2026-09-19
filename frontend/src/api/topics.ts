@@ -129,6 +129,30 @@ export async function getTopicDetail(
   return mapTopicDetail(response)
 }
 
+export async function startTopic(
+  apiClient: ApiClient,
+  workspaceId: string,
+  topicId: string,
+): Promise<Topic> {
+  const response = await apiClient.request<TopicSummaryDto>(
+    `/api/v1/workspaces/${workspaceId}/topics/${topicId}/start`,
+    { method: "POST" },
+  )
+  return mapTopic(response)
+}
+
+export async function retryTopic(
+  apiClient: ApiClient,
+  workspaceId: string,
+  topicId: string,
+): Promise<Topic> {
+  const response = await apiClient.request<TopicSummaryDto>(
+    `/api/v1/workspaces/${workspaceId}/topics/${topicId}/retry`,
+    { method: "POST" },
+  )
+  return mapTopic(response)
+}
+
 export async function createTopics(
   apiClient: ApiClient,
   workspaceId: string,
