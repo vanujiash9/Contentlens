@@ -196,6 +196,14 @@ export default function App() {
     })
   }, [])
 
+  const removeTopic = useCallback((topicId: string) => {
+    setTopics((currentTopics) => currentTopics.filter((topic) => topic.id !== topicId))
+  }, [])
+
+  const replaceBriefs = useCallback((nextBriefs: BriefSummary[]) => {
+    setBriefs(nextBriefs)
+  }, [])
+
   if (isAuthLoading) {
     return <div className={s.app}>Đang tải phiên đăng nhập...</div>
   }
@@ -260,6 +268,7 @@ export default function App() {
           isLoading={isDataLoading}
           error={dataError}
           onTopicChange={mergeTopic}
+          onTopicDelete={removeTopic}
         />
       )
     }
@@ -284,8 +293,9 @@ export default function App() {
         <ContentBriefs
           apiClient={apiClient}
           workspaceId={workspaceId}
+          initialBriefs={briefs}
           onNavigate={navigate}
-          onBriefsChange={setBriefs}
+          onBriefsChange={replaceBriefs}
         />
       )
     }

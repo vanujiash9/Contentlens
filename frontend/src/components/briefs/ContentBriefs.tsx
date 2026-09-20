@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import {
   approveBrief,
+  deleteBrief,
   listBriefs,
   requestBriefRevision,
   saveBriefDraft,
@@ -17,6 +18,7 @@ import s from "./ContentBriefs.module.css"
 interface ContentBriefsProps {
   apiClient: ApiClient
   workspaceId: string
+  initialBriefs?: BriefSummary[]
   onNavigate: (view: string) => void
   onBriefsChange?: (briefs: BriefSummary[]) => void
 }
@@ -52,12 +54,16 @@ function BriefCard({
   topic,
   reviewStatus,
   approvedAt,
+  isDeleting,
   onOpen,
+  onDelete,
 }: {
   topic: BriefTopic
   reviewStatus: ReviewStatus
   approvedAt?: string
+  isDeleting: boolean
   onOpen: () => void
+  onDelete: () => void
 }) {
   const isMobile = useIsMobile()
   const brief = topic.brief!
@@ -154,9 +160,30 @@ function BriefCard({
             </span>
           )}
         </div>
-        <span style={{ fontSize: 12, color: "#2563eb", fontWeight: 500 }}>
-          Xem chi tiết →
-        </span>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={(event) => {
+              event.stopPropagation()
+              onDelete()
+            }}
+            disabled={isDeleting}
+            style={{
+              padding: "5px 10px",
+              background: "#fff",
+              color: "#dc2626",
+              border: "1px solid #fecaca",
+              borderRadius: 6,
+              fontSize: 12,
+              cursor: isDeleting ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {isDeleting ? "Đang xóa..." : "Xóa"}
+          </button>
+          <span style={{ fontSize: 12, color: "#2563eb", fontWeight: 500 }}>
+            Xem chi tiết →
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -780,16 +807,27 @@ function BriefViewer({
   )
 }
 
-export default function ContentBriefs({ apiClient, workspaceId, onNavigate, onBriefsChange }: ContentBriefsProps) {
+export default function ContentBriefs({
+  apiClient,
+  workspaceId,
+  initialBriefs = [],
+  onNavigate,
+  onBriefsChange,
+}: ContentBriefsProps) {
   const isMobile = useIsMobile()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] =
     useState<"all" | "pending_review" | "approved">("all")
-  const [briefs, setBriefs] = useState<BriefSummary[]>([])
+  const [briefs, setBriefs] = useState<BriefSummary[]>(initialBriefs)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deletingBriefIds, setDeletingBriefIds] = useState<Set<string>>(new Set())
   const [reviewStatuses, setReviewStatuses] = useState<Record<string, ReviewStatus>>({})
   const [approvalTimes, setApprovalTimes] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    setBriefs((current) => (current.length === 0 && initialBriefs.length > 0 ? initialBriefs : current))
+  }, [initialBriefs])
 
   useEffect(() => {
     let isActive = true
@@ -853,6 +891,43 @@ export default function ContentBriefs({ apiClient, workspaceId, onNavigate, onBr
           (t) => (reviewStatuses[t.id] ?? "pending_review") === activeTab,
         )
 
+  const handleDeleteBrief = async (brief: BriefSummary) => {
+    const confirmed = window.confirm(`Xóa brief “${brief.title}”?`)
+    if (!confirmed) {
+      return
+    }
+
+    setError(null)
+    setDeletingBriefIds((current) => new Set([...current, brief.id]))
+    try {
+      await deleteBrief(apiClient, workspaceId, brief.id)
+      setBriefs((current) => {
+        const next = current.filter((item) => item.id !== brief.id)
+        onBriefsChange?.(next)
+        return next
+      })
+      setReviewStatuses((current) => {
+        const { [brief.id]: _removed, ...next } = current
+        return next
+      })
+      setApprovalTimes((current) => {
+        const { [brief.id]: _removed, ...next } = current
+        return next
+      })
+      if (selectedId === brief.id) {
+        setSelectedId(null)
+      }
+    } catch (deleteError: unknown) {
+      setError(getErrorMessage(deleteError))
+    } finally {
+      setDeletingBriefIds((current) => {
+        const next = new Set(current)
+        next.delete(brief.id)
+        return next
+      })
+    }
+  }
+
   if (selectedId) {
     const topic = topicsWithBriefs.find((t) => t.id === selectedId)
     if (topic)
@@ -892,11 +967,12 @@ export default function ContentBriefs({ apiClient, workspaceId, onNavigate, onBr
 
   return (
     <PageShell
-      title="Content Brief"
+      title="Lịch sử Content Brief"
       subtitle={`${topicsWithBriefs.length} brief đã tạo · Output cuối cùng của AI research`}
       maxWidth={layout.contentWidth}
     >
-      {isLoading ? <div className={s.emptyCard}>Đang tải brief...</div> : null}
+      {isLoading && briefs.length === 0 ? <div className={s.emptyCard}>Đang tải brief...</div> : null}
+      {isLoading && briefs.length > 0 ? <div className={s.emptyText}>Đang cập nhật brief...</div> : null}
       {error ? <div className={s.emptyCard}>{error}</div> : null}
       <div className={s.tabBar}>
         {tabs.map((tab) => {
@@ -974,7 +1050,9 @@ export default function ContentBriefs({ apiClient, workspaceId, onNavigate, onBr
               topic={topic}
               reviewStatus={reviewStatuses[topic.id] ?? "pending_review"}
               approvedAt={approvalTimes[topic.id]}
+              isDeleting={deletingBriefIds.has(topic.brief.id)}
               onOpen={() => setSelectedId(topic.id)}
+              onDelete={() => void handleDeleteBrief(topic.brief)}
             />
           ))}
         </div>

@@ -8,6 +8,7 @@
 .primaryBtn,
 .secondaryBtn,
 .actionBtn,
+.secondaryActionBtn,
 .deleteBtn,
 .filterBtn,
 .mobileAddBtn {
@@ -48,6 +49,17 @@
 .secondaryBtn:hover {
   border-color: var(--primary-border);
   background: var(--primary-soft);
+}
+
+.flowHint {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--primary-border);
+  border-radius: 14px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .controlsRow {
@@ -124,6 +136,195 @@
   color: var(--primary);
 }
 
+.researchPanel {
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, var(--surface-card), var(--surface-subtle));
+  box-shadow: var(--shadow-xs);
+}
+
+.researchPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.researchPanelHeader h2 {
+  margin: 4px 0 5px;
+  color: var(--text-strong);
+  font-size: 20px;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.researchPanelHeader p,
+.researchCtaRow span,
+.researchEmptyText {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.researchEyebrow {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.researchNotice,
+.researchError {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.researchNotice {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.researchError {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+
+.researchMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.researchMetric {
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-card);
+}
+
+.researchMetric strong {
+  display: block;
+  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.researchMetric span {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.researchGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.researchSection {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.researchSection h3 {
+  margin: 0 0 9px;
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.competitorList,
+.insightList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.competitorList li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: flex-start;
+}
+
+.competitorList strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.competitorList a {
+  display: block;
+  overflow: hidden;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankBadge {
+  min-width: 30px;
+  padding: 5px 6px;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.insightList li {
+  position: relative;
+  padding-left: 14px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.insightList li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--primary);
+  content: "";
+}
+
+.researchCtaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
 .tableContainer {
   overflow: hidden;
   border: 1px solid var(--border);
@@ -135,7 +336,7 @@
 .tableHeader,
 .tableRow {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 140px 132px 92px 118px 118px;
+  grid-template-columns: minmax(260px, 1fr) 132px 112px 86px 108px minmax(190px, 0.32fr);
   gap: 12px;
   align-items: center;
 }
@@ -298,17 +499,24 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  justify-content: flex-start;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.actionBtn,
+.secondaryActionBtn {
+  min-height: 28px;
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .actionBtn {
-  min-height: 32px;
-  padding: 7px 10px;
   border: 1px solid var(--primary-border);
   background: var(--primary-soft);
   color: var(--primary);
-  font-size: 12px;
-  font-weight: 800;
 }
 
 .actionBtn:hover {
@@ -316,15 +524,28 @@
   color: #ffffff;
 }
 
+.secondaryActionBtn {
+  border: 1px solid var(--border);
+  background: var(--surface-card);
+  color: var(--text-muted);
+}
+
+.secondaryActionBtn:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
 .deleteBtn {
-  min-width: 32px;
-  min-height: 32px;
-  padding: 4px 9px;
-  border: 1px solid var(--border-subtle);
+  min-height: 28px;
+  padding: 6px 8px;
+  border: 1px solid var(--status-danger-bg);
   background: transparent;
-  color: var(--text-faint);
-  font-size: 16px;
+  color: var(--status-danger);
+  font-size: 11px;
+  font-weight: 800;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .deleteBtn:hover {
@@ -416,6 +637,7 @@
 .primaryBtn:focus-visible,
 .secondaryBtn:focus-visible,
 .actionBtn:focus-visible,
+.secondaryActionBtn:focus-visible,
 .deleteBtn:focus-visible,
 .filterBtn:focus-visible,
 .mobileAddBtn:focus-visible,
@@ -428,7 +650,14 @@
 @media (max-width: 1100px) {
   .tableHeader,
   .tableRow {
-    grid-template-columns: minmax(220px, 1fr) 132px 120px 86px 108px 108px;
+    grid-template-columns: minmax(220px, 1fr) 124px 104px 78px 96px minmax(180px, 0.34fr);
+  }
+
+  .actionBtn,
+  .secondaryActionBtn,
+  .deleteBtn {
+    padding-inline: 8px;
+    font-size: 10px;
   }
 }
 
@@ -449,11 +678,23 @@
     flex: 1;
   }
 
+  .researchPanelHeader,
+  .researchCtaRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .researchMetrics,
+  .researchGrid {
+    grid-template-columns: 1fr;
+  }
+
   .mobileCard .actions {
     justify-content: space-between;
   }
 
-  .mobileCard .actionBtn {
+  .mobileCard .actionBtn,
+  .mobileCard .secondaryActionBtn {
     flex: 1;
   }
 }
@@ -465,6 +706,7 @@
   }
 
   .actionBtn,
+  .secondaryActionBtn,
   .deleteBtn {
     width: 100%;
   }

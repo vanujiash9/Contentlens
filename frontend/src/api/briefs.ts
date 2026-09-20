@@ -96,6 +96,16 @@ export async function getBrief(
   return mapBrief(response)
 }
 
+export async function deleteBrief(
+  apiClient: ApiClient,
+  workspaceId: string,
+  briefId: string,
+): Promise<void> {
+  await apiClient.request<void>(`/api/v1/workspaces/${workspaceId}/briefs/${briefId}`, {
+    method: "DELETE",
+  })
+}
+
 export async function saveBriefDraft(
   apiClient: ApiClient,
   workspaceId: string,

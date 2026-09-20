@@ -194,3 +194,17 @@ class DiscoveryRepository:
             .execute()
         )
         return response.data[0]
+
+    def delete_discovered_topic(
+        self,
+        workspace_id: UUID,
+        discovered_topic_id: UUID,
+    ) -> bool:
+        response = (
+            self.supabase.table("discovered_topics")
+            .delete()
+            .eq("workspace_id", str(workspace_id))
+            .eq("id", str(discovered_topic_id))
+            .execute()
+        )
+        return len(response.data or []) > 0

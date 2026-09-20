@@ -162,7 +162,10 @@ class DiscoveryService:
             runs=[
                 self._map_run(
                     run,
-                    self.discovery_repository.list_topics_for_run(workspace_id, UUID(str(run["id"]))),
+                    self.discovery_repository.list_topics_for_run(
+                        workspace_id,
+                        UUID(str(run["id"])),
+                    ),
                 )
                 for run in runs
             ]
@@ -224,6 +227,26 @@ class DiscoveryService:
         )
 
         return TopicService._map_topic(topic)
+
+    def delete_discovered_topic(
+        self,
+        workspace_id: UUID,
+        current_user_id: str,
+        discovered_topic_id: UUID,
+    ) -> None:
+        user_id = parse_user_id(current_user_id)
+        self._ensure_workspace_member(user_id, workspace_id)
+        is_deleted = self.discovery_repository.delete_discovered_topic(
+            workspace_id=workspace_id,
+            discovered_topic_id=discovered_topic_id,
+        )
+        if is_deleted:
+            return
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Discovered topic not found",
+        )
 
     def _ensure_workspace_member(self, user_id: UUID, workspace_id: UUID) -> None:
         if self.workspace_repository.is_workspace_member(user_id, workspace_id):

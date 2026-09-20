@@ -54,7 +54,7 @@ const navItems = [
 
   {
     id: "topics",
-    label: "Chủ đề",
+    label: "Nghiên cứu",
     icon: () => (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <line
@@ -123,7 +123,7 @@ const navItems = [
 
   {
     id: "briefs",
-    label: "Nội dung",
+    label: "Brief",
     icon: () => (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <rect
@@ -171,7 +171,7 @@ const navItems = [
 
   {
     id: "discovery",
-    label: "Gợi ý",
+    label: "Khám phá",
     icon: () => (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <path

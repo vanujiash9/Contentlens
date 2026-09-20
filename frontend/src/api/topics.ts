@@ -153,6 +153,16 @@ export async function retryTopic(
   return mapTopic(response)
 }
 
+export async function deleteTopic(
+  apiClient: ApiClient,
+  workspaceId: string,
+  topicId: string,
+): Promise<void> {
+  await apiClient.request<void>(`/api/v1/workspaces/${workspaceId}/topics/${topicId}`, {
+    method: "DELETE",
+  })
+}
+
 export async function createTopics(
   apiClient: ApiClient,
   workspaceId: string,

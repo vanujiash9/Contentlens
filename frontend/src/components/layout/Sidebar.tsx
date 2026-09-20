@@ -207,14 +207,14 @@ export default function Sidebar({
           <div className={s.sectionLabel}>NGHIÊN CỨU</div>
 
           <NavItem
-            label="Hàng đợi chủ đề"
+            label="Hàng đợi nghiên cứu"
             icon={QueueIcon}
             active={queueActive}
             onClick={() => onNavigate("topics")}
           />
 
           <NavItem
-            label="Gợi ý chủ đề"
+            label="Khám phá topic"
             icon={DiscoveryIcon}
             active={discoveryActive}
             onClick={() => onNavigate("discovery")}
@@ -225,7 +225,7 @@ export default function Sidebar({
           <div className={s.sectionLabel}>NỘI DUNG</div>
 
           <NavItem
-            label="Content Brief"
+            label="Lịch sử Brief"
             icon={BriefIcon}
             active={briefActive}
             onClick={() => onNavigate("briefs")}

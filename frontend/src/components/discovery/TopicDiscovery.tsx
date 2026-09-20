@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react"
 import {
   addDiscoveredTopicToQueue,
   createDiscoveryRun,
+  deleteDiscoveredTopic,
   getDiscoveryRun,
   getLatestDiscoveryRun,
+  listDiscoveryRuns,
   type DiscoveryRun,
 } from "../../api/discovery"
 import type { ApiClient } from "../../api/client"
@@ -44,6 +46,17 @@ function getAddedTopicIds(topics: DiscoveredTopic[]): Set<string> {
       .filter((topic) => topic.addedToQueueAt !== undefined || topic.topicId !== undefined)
       .map((topic) => topic.id),
   )
+}
+
+function mergeDiscoveryTopics(runs: DiscoveryRun[]): DiscoveredTopic[] {
+  const seen = new Set<string>()
+  return runs.flatMap((run) => run.topics).filter((topic) => {
+    if (seen.has(topic.id)) {
+      return false
+    }
+    seen.add(topic.id)
+    return true
+  })
 }
 
 function SignalCard({ label, signal }: { label: string; signal: SignalDetail }) {
@@ -123,6 +136,7 @@ export default function TopicDiscovery({
   const [results, setResults] = useState<DiscoveredTopic[]>(initialRun?.topics ?? [])
   const [addedIds, setAddedIds] = useState<Set<string>>(() => getAddedTopicIds(initialRun?.topics ?? []))
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set())
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const toastKey = useRef(0)
@@ -154,35 +168,35 @@ export default function TopicDiscovery({
     setIsRunning(true)
     setError(null)
 
-    const applyRun = (run: DiscoveryRun) => {
-      if (!isActive) {
+    const applyRuns = (runs: DiscoveryRun[]) => {
+      if (!isActive || runs.length === 0) {
         return
       }
 
-      setIndustry(run.industry ?? "Piano & nhạc cụ phím")
-      setMarket(run.market ?? "Việt Nam")
-      setPeriod(`${run.periodDays ?? 30}` as `${PeriodDays}`)
-      setCount(String(run.resultCount))
-      setResults(run.topics)
-      setAddedIds(getAddedTopicIds(run.topics))
+      const latestRun = runs[0]
+      const topics = mergeDiscoveryTopics(runs)
+      setIndustry(latestRun.industry ?? "Piano & nhạc cụ phím")
+      setMarket(latestRun.market ?? "Việt Nam")
+      setPeriod(`${latestRun.periodDays ?? 30}` as `${PeriodDays}`)
+      setCount(String(latestRun.resultCount))
+      setResults(topics)
+      setAddedIds(getAddedTopicIds(topics))
       setHasRun(true)
-      onRunChange?.(run)
-      window.localStorage.setItem(getStorageKey(workspaceId), run.id)
+      onRunChange?.({ ...latestRun, topics })
+      window.localStorage.setItem(getStorageKey(workspaceId), latestRun.id)
     }
 
     const runId = window.localStorage.getItem(getStorageKey(workspaceId))
-    getLatestDiscoveryRun(apiClient, workspaceId)
+    listDiscoveryRuns(apiClient, workspaceId, 50)
       .catch(() => {
         if (runId === null) {
-          return null
+          return []
         }
 
-        return getDiscoveryRun(apiClient, workspaceId, runId)
+        return getDiscoveryRun(apiClient, workspaceId, runId).then((run) => [run])
       })
-      .then((run) => {
-        if (run !== null) {
-          applyRun(run)
-        }
+      .then((runs) => {
+        applyRuns(runs)
       })
       .catch((restoreError: unknown) => {
         if (isActive) {
@@ -202,9 +216,6 @@ export default function TopicDiscovery({
 
   const handleDiscover = async () => {
     setIsRunning(true)
-    setHasRun(false)
-    setResults([])
-    setAddedIds(new Set())
     setError(null)
 
     try {
@@ -214,10 +225,13 @@ export default function TopicDiscovery({
         periodDays: Number(period) as PeriodDays,
         resultCount: Number(count),
       })
-      setResults(run.topics)
-      setAddedIds(getAddedTopicIds(run.topics))
+      setResults((currentResults) => {
+        const nextResults = mergeDiscoveryTopics([{ ...run, topics: run.topics }, { ...run, topics: currentResults }])
+        setAddedIds(getAddedTopicIds(nextResults))
+        onRunChange?.({ ...run, topics: nextResults })
+        return nextResults
+      })
       setHasRun(true)
-      onRunChange?.(run)
       window.localStorage.setItem(getStorageKey(workspaceId), run.id)
       if (run.status === "failed") {
         setError(run.errorMessage ?? "AI chưa tạo được chủ đề. Vui lòng thử lại.")
@@ -265,8 +279,50 @@ export default function TopicDiscovery({
     }
   }
 
+  const handleDeleteSuggestion = async (topic: DiscoveredTopic) => {
+    if (deletingIds.has(topic.id)) {
+      return
+    }
+
+    const confirmed = window.confirm(`Xóa gợi ý “${topic.title}”?`)
+    if (!confirmed) {
+      return
+    }
+
+    setDeletingIds((current) => new Set([...current, topic.id]))
+    setError(null)
+    try {
+      await deleteDiscoveredTopic(apiClient, workspaceId, topic.id)
+      setResults((currentResults) => currentResults.filter((currentTopic) => currentTopic.id !== topic.id))
+      setAddedIds((current) => {
+        const next = new Set(current)
+        next.delete(topic.id)
+        return next
+      })
+      setAddingIds((current) => {
+        const next = new Set(current)
+        next.delete(topic.id)
+        return next
+      })
+      if (initialRun !== null) {
+        onRunChange?.({
+          ...initialRun,
+          topics: initialRun.topics.filter((currentTopic) => currentTopic.id !== topic.id),
+        })
+      }
+    } catch (deleteError: unknown) {
+      setError(getErrorMessage(deleteError))
+    } finally {
+      setDeletingIds((current) => {
+        const next = new Set(current)
+        next.delete(topic.id)
+        return next
+      })
+    }
+  }
+
   return (
-    <PageShell title="Gợi ý chủ đề" subtitle="Tìm nhanh chủ đề có tiềm năng nghiên cứu cao." maxWidth={layout.contentWidth}>
+    <PageShell title="Khám phá topic mới" subtitle="Tìm topic mới, chọn chủ đề phù hợp rồi thêm vào Hàng đợi nghiên cứu." maxWidth={layout.contentWidth}>
       <div style={{ width: "100%" }}>
         <div className={s.configPanel}>
           <h2 className={s.configTitle}>Cấu hình khám phá</h2>
@@ -311,7 +367,7 @@ export default function TopicDiscovery({
           <div style={{ marginBottom: 16 }}>
             <div className={s.resultsHeader}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <h2 style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: 0 }}>Kết quả khám phá</h2>
+                <h2 style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: 0 }}>Lịch sử gợi ý chủ đề</h2>
                 <span style={{ fontSize: 11, color: "#9ca3af", background: "#f3f4f6", padding: "2px 7px", borderRadius: 4 }}>{results.length} chủ đề</span>
                 {addedIds.size > 0 ? <span style={{ fontSize: 11, fontWeight: 600, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "2px 8px", borderRadius: 4 }}>✓ {addedIds.size} đã thêm vào hàng đợi</span> : null}
               </div>
@@ -346,8 +402,9 @@ export default function TopicDiscovery({
                         <div className={s.angleHighlight}><span style={{ fontWeight: 600, color: "#2563eb" }}>Góc nội dung: </span>{topic.angle}</div>
                         <p style={{ fontSize: 12, color: "#6b7280", margin: 0, lineHeight: 1.5 }}>{topic.reasoning}</p>
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 5, flexShrink: 0, alignItems: "flex-end" }}>
+                      <div className={s.resultActions}>
                         {!added ? <button onClick={() => void handleAddToQueue(topic.id)} disabled={isAdding} style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: isAdding ? "#93c5fd" : "#2563eb", color: "#fff", fontSize: 12, fontWeight: 600, cursor: isAdding ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{isAdding ? "Đang thêm..." : "Thêm vào hàng đợi"}</button> : <><div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#16a34a", whiteSpace: "nowrap" }}>Đã thêm vào hàng đợi</div><button onClick={() => onNavigate("topics")} style={{ padding: "4px 0", background: "none", border: "none", color: "#9ca3af", fontSize: 11, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>Xem hàng đợi →</button></>}
+                        <button className={s.deleteSuggestionBtn} onClick={() => void handleDeleteSuggestion(topic)} disabled={deletingIds.has(topic.id)}>{deletingIds.has(topic.id) ? "Đang xóa..." : "Xóa"}</button>
                       </div>
                     </div>
                   </div>
