@@ -1,4 +1,5 @@
-from uuid import UUID, uuid4
+import json
+from uuid import UUID
 
 from fastapi import HTTPException, status
 
@@ -130,7 +131,12 @@ class BriefService:
             )
             return self._map_brief(row)
 
-        generation = ensure_brief_has_draft(result.generation, topic["title"], request, research_insights)
+        generation = ensure_brief_has_draft(
+            result.generation,
+            topic["title"],
+            request,
+            research_insights,
+        )
         row = self.brief_repository.upsert_generated_brief(
             workspace_id=workspace_id,
             topic_id=request.topic_id,
@@ -166,7 +172,12 @@ class BriefService:
             )
         )
 
-    def approve_brief(self, workspace_id: UUID, current_user_id: str, brief_id: UUID) -> BriefSummary:
+    def approve_brief(
+        self,
+        workspace_id: UUID,
+        current_user_id: str,
+        brief_id: UUID,
+    ) -> BriefSummary:
         user_id = parse_user_id(current_user_id)
         self._ensure_workspace_member(user_id, workspace_id)
         self._get_existing_brief(workspace_id, brief_id)
@@ -177,6 +188,12 @@ class BriefService:
                 user_id=user_id,
             )
         )
+
+    def delete_brief(self, workspace_id: UUID, current_user_id: str, brief_id: UUID) -> None:
+        user_id = parse_user_id(current_user_id)
+        self._ensure_workspace_member(user_id, workspace_id)
+        self._get_existing_brief(workspace_id, brief_id)
+        self.brief_repository.delete_brief(workspace_id=workspace_id, brief_id=brief_id)
 
     def request_revision(
         self,
@@ -261,48 +278,59 @@ class BriefService:
         if self.research_repository is None:
             return request.research_insights
 
-        parts: list[str] = []
         try:
             plan = self.research_repository.get_plan(request.topic_id)
+            findings = self.research_repository.list_findings(request.topic_id)
+            sources = self.research_repository.list_sources(request.topic_id)
+            gaps = self.research_repository.list_information_gaps(request.topic_id)
+            opportunity = self.research_repository.get_opportunity(request.topic_id)
         except Exception:
             return request.research_insights
 
-        if plan:
-            parts.extend(
-                [
-                    f"Mục tiêu nghiên cứu: {plan.get('objective')}",
-                    f"Search intent: {plan.get('search_intent')}",
-                    f"Đối tượng: {plan.get('audience')}",
-                ]
-            )
-
-        findings = self.research_repository.list_findings(request.topic_id)
-        if findings:
-            parts.append("Phát hiện từ research:")
-            parts.extend(f"- {finding.get('claim')}" for finding in findings[:8])
-
-        sources = self.research_repository.list_sources(request.topic_id)
         fetched_sources = [source for source in sources if source.get("status") == "fetched"]
-        if fetched_sources:
-            parts.append("Nguồn đã đọc:")
-            for source in fetched_sources[:6]:
-                excerpt = str(source.get("extracted_text") or source.get("snippet") or "")[:700]
-                parts.append(f"- {source.get('title')} ({source.get('domain') or source.get('url')}): {excerpt}")
-
-        gaps = self.research_repository.list_information_gaps(request.topic_id)
-        if gaps:
-            parts.append("Khoảng trống nội dung:")
-            parts.extend(f"- {gap.get('description')}" for gap in gaps[:6])
-
-        opportunity = self.research_repository.get_opportunity(request.topic_id)
-        if opportunity:
-            parts.append(f"Khuyến nghị cơ hội: {opportunity.get('recommendation')}")
-
-        if request.research_insights:
-            parts.append("Ghi chú bổ sung từ giao diện:")
-            parts.append(request.research_insights)
-
-        return "\n".join(part for part in parts if part) or request.research_insights
+        research_bundle = {
+            "plan": plan,
+            "findings": [
+                {
+                    "claim": finding.get("claim"),
+                    "finding_type": finding.get("finding_type"),
+                    "source_ids": finding.get("source_ids") or [],
+                    "metadata": finding.get("metadata") or {},
+                }
+                for finding in findings[:12]
+            ],
+            "gaps": [
+                {
+                    "description": gap.get("description"),
+                    "recommendation": gap.get("recommendation"),
+                }
+                for gap in gaps[:12]
+            ],
+            "opportunity": opportunity,
+            "sources": [
+                {
+                    "title": source.get("title"),
+                    "url": source.get("url"),
+                    "domain": source.get("domain"),
+                    "rank": source.get("rank"),
+                    "snippet": source.get("snippet"),
+                    "headings": source.get("headings") or [],
+                    "word_count": source.get("word_count") or 0,
+                    "questions": source.get("questions") or [],
+                    "examples": source.get("examples") or [],
+                    "media_evidence": {
+                        "tables_count": source.get("tables_count") or 0,
+                        "images_count": source.get("images_count") or 0,
+                        "videos_count": source.get("videos_count") or 0,
+                    },
+                    "excerpt": str(source.get("extracted_text") or "")[:1200],
+                }
+                for source in fetched_sources[:10]
+            ],
+            "quality_warnings": build_research_quality_warnings(fetched_sources, opportunity),
+            "supplemental_user_notes": request.research_insights,
+        }
+        return json.dumps(research_bundle, ensure_ascii=False)
 
     def _get_existing_brief(self, workspace_id: UUID, brief_id: UUID) -> dict:
         row = self.brief_repository.get_by_id(workspace_id, brief_id)
@@ -367,6 +395,22 @@ def ensure_expected_version(row: dict, expected_version: int | None) -> None:
     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Brief version changed")
 
 
+def build_research_quality_warnings(
+    fetched_sources: list[dict],
+    opportunity: dict | None,
+) -> list[str]:
+    warnings = []
+    if len(fetched_sources) < 5:
+        warnings.append(
+            f"Chỉ có {len(fetched_sources)} competitor đã fetch; "
+            "cần kiểm chứng thêm trước khi publish."
+        )
+    metadata = opportunity.get("metadata") if opportunity else None
+    if isinstance(metadata, dict):
+        warnings.extend(str(warning) for warning in metadata.get("warnings") or [])
+    return warnings
+
+
 def build_fallback_brief_generation(
     *,
     topic: str,
@@ -378,8 +422,14 @@ def build_fallback_brief_generation(
 
     outline = [
         {"section": "Mở bài", "description": f"Nêu vấn đề và nhu cầu tìm hiểu về {topic}."},
-        {"section": "Tiêu chí đánh giá", "description": "Liệt kê các tiêu chí thực tế người đọc nên cân nhắc."},
-        {"section": "Khuyến nghị hành động", "description": "Đưa checklist và lời khuyên theo từng nhóm nhu cầu."},
+        {
+            "section": "Tiêu chí đánh giá",
+            "description": "Liệt kê các tiêu chí thực tế người đọc nên cân nhắc.",
+        },
+        {
+            "section": "Khuyến nghị hành động",
+            "description": "Đưa checklist và lời khuyên theo từng nhóm nhu cầu.",
+        },
     ]
     key_facts = [line for line in research_insights.split("\n")[:8] if line]
     return ContentBriefGeneration(
@@ -416,10 +466,9 @@ def ensure_brief_has_draft(
     if not isinstance(brief, ContentBriefGeneration) or brief.draft.strip():
         return generation
 
+    key_facts = brief.key_facts or research_insights.split("\n")[:8]
     return brief.model_copy(
-        update={
-            "draft": build_fallback_draft(topic, request, brief.outline, brief.key_facts or research_insights.split("\n")[:8])
-        }
+        update={"draft": build_fallback_draft(topic, request, brief.outline, key_facts)}
     )
 
 
@@ -429,11 +478,11 @@ def build_fallback_draft(
     outline: list[dict],
     key_facts: list[str],
 ) -> str:
-    outline_text = "\n".join(
-        f"## {item.get('section') or item.get('heading') or item.get('title') or 'Phần nội dung'}\n{item.get('description') or item.get('summary') or ''}"
-        for item in outline
+    outline_text = "\n".join(format_outline_item(item) for item in outline)
+    facts_text = (
+        "\n".join(f"- {fact}" for fact in key_facts[:8])
+        or "- Chưa có dữ kiện nghiên cứu chi tiết."
     )
-    facts_text = "\n".join(f"- {fact}" for fact in key_facts[:8]) or "- Chưa có dữ kiện nghiên cứu chi tiết."
     return (
         f"# {topic}\n\n"
         f"> Mục tiêu: {request.business_goal}\n\n"
@@ -444,6 +493,12 @@ def build_fallback_draft(
         f"{outline_text}\n\n"
         "## Kết luận\nTóm tắt khuyến nghị chính và dẫn người đọc đến bước hành động tiếp theo."
     )
+
+
+def format_outline_item(item: dict) -> str:
+    heading = item.get("section") or item.get("heading") or item.get("title")
+    description = item.get("description") or item.get("summary") or ""
+    return f"## {heading or 'Phần nội dung'}\n{description}"
 
 
 def map_brief_workflow_error(error: WorkflowError) -> tuple[str, str, int]:

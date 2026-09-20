@@ -4,8 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-
 SourceStatus = Literal["pending", "fetched", "failed"]
+ContentDepth = Literal["thin", "moderate", "deep"]
 
 
 class ResearchPlan(BaseModel):
@@ -33,6 +33,13 @@ class ResearchSourceSummary(BaseModel):
     snippet: str | None = None
     status: SourceStatus
     extracted_text: str | None = None
+    headings: list[dict[str, Any]] = Field(default_factory=list)
+    word_count: int = 0
+    questions: list[str] = Field(default_factory=list)
+    examples: list[str] = Field(default_factory=list)
+    tables_count: int = 0
+    images_count: int = 0
+    videos_count: int = 0
     error_message: str | None = None
     created_at: datetime
     fetched_at: datetime | None = None
@@ -90,8 +97,46 @@ class ResearchOpportunityAnalysis(BaseModel):
     reasons: list[str] = Field(default_factory=list, max_length=8)
 
 
+class CompetitorMediaEvidence(BaseModel):
+    tables_count: int = Field(default=0, ge=0)
+    images_count: int = Field(default=0, ge=0)
+    videos_count: int = Field(default=0, ge=0)
+
+
+class CompetitorAnalysis(BaseModel):
+    source_url: str = Field(min_length=1, max_length=1000)
+    source_title: str = Field(min_length=1, max_length=300)
+    rank: int | None = Field(default=None, ge=1)
+    intent: str = Field(min_length=1, max_length=700)
+    main_angle: str = Field(min_length=1, max_length=700)
+    strengths: list[str] = Field(default_factory=list, max_length=8)
+    weaknesses: list[str] = Field(default_factory=list, max_length=8)
+    content_depth: ContentDepth = "moderate"
+    unique_value: str = Field(default="", max_length=700)
+    topics: list[str] = Field(default_factory=list, max_length=15)
+    subtopics: list[str] = Field(default_factory=list, max_length=30)
+    questions_answered: list[str] = Field(default_factory=list, max_length=20)
+    entities: list[str] = Field(default_factory=list, max_length=30)
+    examples: list[str] = Field(default_factory=list, max_length=12)
+    media_evidence: CompetitorMediaEvidence = Field(
+        default_factory=CompetitorMediaEvidence
+    )
+
+
+class CrossSerpAnalysis(BaseModel):
+    common_patterns: list[str] = Field(default_factory=list, max_length=15)
+    must_cover_topics: list[str] = Field(default_factory=list, max_length=20)
+    content_gaps: list[str] = Field(default_factory=list, max_length=20)
+    weak_explanations: list[str] = Field(default_factory=list, max_length=20)
+    unanswered_questions: list[str] = Field(default_factory=list, max_length=20)
+    differentiation_opportunities: list[str] = Field(default_factory=list, max_length=12)
+    information_gain_opportunities: list[str] = Field(default_factory=list, max_length=12)
+
+
 class ResearchAnalysisGeneration(BaseModel):
     findings: list[GeneratedResearchFinding] = Field(min_length=1, max_length=10)
     information_gaps: list[GeneratedInformationGap] = Field(default_factory=list, max_length=10)
     opportunity: ResearchOpportunityAnalysis
     warnings: list[str] = Field(default_factory=list, max_length=8)
+    competitors: list[CompetitorAnalysis] = Field(default_factory=list, max_length=10)
+    cross_serp_analysis: CrossSerpAnalysis | None = None

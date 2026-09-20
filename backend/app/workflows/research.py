@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from urllib.parse import urlparse
 from uuid import UUID
 
 from app.ai.provider import (
@@ -11,7 +12,7 @@ from app.integrations.search_provider import (
     SearchProviderError,
     SearchProviderNotConfiguredError,
 )
-from app.integrations.source_fetcher import SourceFetcher, SourceFetchError
+from app.integrations.source_fetcher import FetchedSource, SourceFetcher, SourceFetchError
 from app.prompts import research_analysis
 from app.repositories.research import ResearchRepository
 from app.schemas.research import ResearchAnalysisGeneration, ResearchPlan
@@ -21,6 +22,8 @@ DEFAULT_INDUSTRY = "Piano & nhạc cụ phím"
 DEFAULT_MARKET = "Việt Nam"
 SOURCE_FETCH_LIMIT = 5
 SEARCH_RESULT_LIMIT = 10
+SOURCE_ANALYSIS_TEXT_LIMIT = 12000
+MIN_COMPETITOR_WARNING_THRESHOLD = 5
 
 
 @dataclass(frozen=True)
@@ -55,12 +58,13 @@ class RunResearchStep:
         self.search_provider = search_provider
         self.source_fetcher = source_fetcher
         self.analysis_provider = analysis_provider
-        self.source_fetch_limit = max(1, source_fetch_limit)
+        self.source_fetch_limit = max(1, min(source_fetch_limit, SEARCH_RESULT_LIMIT))
 
     def execute(self, context: WorkflowContext) -> ResearchWorkflowResult:
         request = ResearchWorkflowInput(**context.input)
         plan = build_research_plan(request)
         self.research_repository.upsert_plan(
+            workspace_id=context.workspace_id,
             topic_id=request.topic_id,
             plan=plan.model_dump(),
         )
@@ -70,12 +74,14 @@ class RunResearchStep:
         for query in queries:
             results = self.search_provider.search(query, SEARCH_RESULT_LIMIT)
             query_row = self.research_repository.create_query(
+                workspace_id=context.workspace_id,
                 topic_id=request.topic_id,
                 query=query,
                 result_count=len(results),
             )
             sources.extend(
                 self.research_repository.insert_serp_results(
+                    workspace_id=context.workspace_id,
                     topic_id=request.topic_id,
                     query_id=UUID(str(query_row["id"])),
                     results=results,
@@ -85,7 +91,15 @@ class RunResearchStep:
         fetched_count = 0
         failed_count = 0
         fetched_source_ids: list[UUID] = []
-        for source in sources[: self.source_fetch_limit]:
+        analysis_sources: list[dict] = []
+        seen_urls: set[str] = set()
+        for source in sources:
+            if fetched_count >= self.source_fetch_limit:
+                break
+            canonical_url = canonicalize_url(str(source.get("url") or ""))
+            if not canonical_url or canonical_url in seen_urls:
+                continue
+            seen_urls.add(canonical_url)
             source_id = UUID(str(source["id"]))
             try:
                 fetched_source = self.source_fetcher.fetch(str(source["url"]))
@@ -99,22 +113,32 @@ class RunResearchStep:
 
             fetched_count += 1
             fetched_source_ids.append(source_id)
-            self.research_repository.mark_source_fetched(
+            fetched_row = self.research_repository.mark_source_fetched(
                 source_id=source_id,
                 fetched_source=fetched_source,
             )
+            analysis_sources.append(
+                build_analysis_source(
+                    source=source,
+                    fetched_row=fetched_row,
+                    fetched_source=fetched_source,
+                )
+            )
 
-        analysis = self._analyze_sources(request, sources)
+        analysis = self._analyze_sources(request, analysis_sources)
         if analysis is None:
             self.research_repository.insert_findings(
+                workspace_id=context.workspace_id,
                 topic_id=request.topic_id,
                 findings=build_findings(request, fetched_source_ids),
             )
             self.research_repository.insert_information_gaps(
+                workspace_id=context.workspace_id,
                 topic_id=request.topic_id,
                 gaps=build_information_gaps(request),
             )
             self.research_repository.upsert_opportunity(
+                workspace_id=context.workspace_id,
                 topic_id=request.topic_id,
                 opportunity=build_opportunity(
                     request,
@@ -124,19 +148,22 @@ class RunResearchStep:
             )
         else:
             source_id_by_url = {
-                str(source.get("url")): UUID(str(source["id"])) for source in sources
+                str(source.get("url")): UUID(str(source["id"])) for source in analysis_sources
             }
             self.research_repository.insert_findings(
+                workspace_id=context.workspace_id,
                 topic_id=request.topic_id,
                 findings=build_ai_findings(analysis, source_id_by_url),
             )
             self.research_repository.insert_information_gaps(
+                workspace_id=context.workspace_id,
                 topic_id=request.topic_id,
                 gaps=build_ai_information_gaps(analysis),
             )
             self.research_repository.upsert_opportunity(
+                workspace_id=context.workspace_id,
                 topic_id=request.topic_id,
-                opportunity=build_ai_opportunity(analysis),
+                opportunity=build_ai_opportunity(analysis, fetched_count, self.source_fetch_limit),
             )
 
         return ResearchWorkflowResult(
@@ -147,7 +174,6 @@ class RunResearchStep:
             failed_sources_count=failed_count,
         )
 
-
     def _analyze_sources(
         self,
         request: ResearchWorkflowInput,
@@ -156,7 +182,7 @@ class RunResearchStep:
         if self.analysis_provider is None or not sources:
             return None
 
-        source_text = format_sources_for_analysis(sources[: self.source_fetch_limit])
+        source_text = format_sources_for_analysis(sources)
         if not source_text:
             return None
 
@@ -251,14 +277,74 @@ def build_search_queries(topic_title: str) -> list[str]:
     return [topic_title, f"{topic_title} review kinh nghiệm mua"]
 
 
+def build_analysis_source(
+    *,
+    source: dict,
+    fetched_row: dict,
+    fetched_source: FetchedSource,
+) -> dict:
+    return {
+        **source,
+        **fetched_row,
+        "url": fetched_source.url,
+        "title": fetched_source.title or source.get("title") or "Untitled",
+        "domain": fetched_source.domain,
+        "extracted_text": fetched_source.text,
+        "headings": [heading.__dict__ for heading in fetched_source.headings],
+        "word_count": fetched_source.word_count,
+        "questions": list(fetched_source.questions),
+        "examples": list(fetched_source.examples),
+        "tables_count": fetched_source.tables_count,
+        "images_count": fetched_source.images_count,
+        "videos_count": fetched_source.videos_count,
+    }
+
+
 def format_sources_for_analysis(sources: list[dict]) -> str:
     parts = []
-    for source in sources:
+    for index, source in enumerate(sources, start=1):
         title = source.get("title") or "Untitled"
         url = source.get("url") or ""
         snippet = source.get("snippet") or ""
-        parts.append(f"Title: {title}\nURL: {url}\nSnippet: {snippet}")
+        rank = source.get("rank") or index
+        text = str(source.get("extracted_text") or "")[:SOURCE_ANALYSIS_TEXT_LIMIT]
+        headings = format_headings(list(source.get("headings") or []))
+        questions = format_list(list(source.get("questions") or []))
+        examples = format_list(list(source.get("examples") or []))
+        parts.append(
+            "\n".join(
+                [
+                    f"Competitor #{index}",
+                    f"Rank: {rank}",
+                    f"Title: {title}",
+                    f"URL: {url}",
+                    f"Snippet: {snippet}",
+                    f"Word count: {source.get('word_count') or 0}",
+                    f"H1/H2/H3 headings:\n{headings}",
+                    f"Questions found:\n{questions}",
+                    f"Examples found:\n{examples}",
+                    f"Tables: {source.get('tables_count') or 0}",
+                    f"Images: {source.get('images_count') or 0}",
+                    f"Videos: {source.get('videos_count') or 0}",
+                    f"Cleaned article text:\n{text}",
+                ]
+            )
+        )
     return "\n\n---\n\n".join(parts)
+
+
+def format_headings(headings: list[dict]) -> str:
+    lines = [
+        f"- {heading.get('level', '').upper()}: {heading.get('text', '')}"
+        for heading in headings
+        if heading.get("text")
+    ]
+    return "\n".join(lines) or "- No H1/H2/H3 headings extracted."
+
+
+def format_list(items: list[str]) -> str:
+    lines = [f"- {item}" for item in items if item]
+    return "\n".join(lines) or "- None extracted."
 
 
 def build_ai_findings(
@@ -281,13 +367,40 @@ def build_ai_findings(
 
 
 def build_ai_information_gaps(analysis: ResearchAnalysisGeneration) -> list[dict]:
-    return [
+    ai_gaps = [
         {"description": gap.description, "recommendation": gap.recommendation}
         for gap in analysis.information_gaps
     ]
+    cross_serp = analysis.cross_serp_analysis
+    if cross_serp is None:
+        return ai_gaps
+    cross_serp_gaps = [
+        {"description": gap, "recommendation": "Lấp khoảng trống này trong brief/draft."}
+        for gap in [
+            *cross_serp.content_gaps,
+            *cross_serp.weak_explanations,
+            *cross_serp.unanswered_questions,
+        ]
+    ]
+    return [*ai_gaps, *cross_serp_gaps]
 
 
-def build_ai_opportunity(analysis: ResearchAnalysisGeneration) -> dict:
+def build_ai_opportunity(
+    analysis: ResearchAnalysisGeneration,
+    fetched_count: int,
+    source_fetch_limit: int,
+) -> dict:
+    warnings = list(analysis.warnings)
+    if fetched_count < MIN_COMPETITOR_WARNING_THRESHOLD:
+        warnings.append(
+            f"Chỉ phân tích được {fetched_count}/{source_fetch_limit} competitor, "
+            "cần kiểm chứng thêm."
+        )
+    cross_serp_analysis = (
+        analysis.cross_serp_analysis.model_dump(mode="json")
+        if analysis.cross_serp_analysis is not None
+        else None
+    )
     return {
         "score": analysis.opportunity.score,
         "priority": analysis.opportunity.priority,
@@ -296,7 +409,13 @@ def build_ai_opportunity(analysis: ResearchAnalysisGeneration) -> dict:
             "angle": analysis.opportunity.angle,
             "audience": analysis.opportunity.audience,
             "reasons": analysis.opportunity.reasons,
-            "warnings": analysis.warnings,
+            "warnings": warnings,
+            "competitor_analysis": [
+                competitor.model_dump(mode="json") for competitor in analysis.competitors
+            ],
+            "cross_serp_analysis": cross_serp_analysis,
+            "fetched_sources": fetched_count,
+            "source_fetch_limit": source_fetch_limit,
             "generated_by": "ai_research_analysis",
         },
     }
@@ -356,6 +475,8 @@ def build_opportunity(
             "fetched_sources": fetched_count,
             "source_fetch_limit": source_fetch_limit,
             "warnings": warnings,
+            "competitor_analysis": [],
+            "cross_serp_analysis": None,
             "angle": "Hướng dẫn thực tế dựa trên phân tích nội dung cạnh tranh",
             "audience": request.market,
             "reasons": [
@@ -364,3 +485,12 @@ def build_opportunity(
             ],
         },
     }
+
+
+def canonicalize_url(url: str) -> str:
+    if not url:
+        return ""
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    path = parsed.path.rstrip("/") or "/"
+    return f"{parsed.scheme.lower()}://{hostname}{path}"
