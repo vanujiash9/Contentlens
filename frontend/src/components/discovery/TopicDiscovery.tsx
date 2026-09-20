@@ -4,7 +4,6 @@ import {
   createDiscoveryRun,
   deleteDiscoveredTopic,
   getDiscoveryRun,
-  getLatestDiscoveryRun,
   listDiscoveryRuns,
   type DiscoveryRun,
 } from "../../api/discovery"
