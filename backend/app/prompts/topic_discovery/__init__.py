@@ -13,6 +13,7 @@ class TopicDiscoveryPromptInput:
     market: str
     period_days: int
     result_count: int
+    search_evidence: str
 
 
 PROMPT_DIR = Path(__file__).parent
@@ -40,6 +41,7 @@ def build_user_prompt(request: TopicDiscoveryPromptInput) -> str:
         industry=request.industry,
         market=request.market,
         period_days=request.period_days,
+        search_evidence=request.search_evidence,
         schema_hint=json.dumps(schema_hint, ensure_ascii=False),
     )
 

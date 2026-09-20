@@ -129,6 +129,17 @@ export async function addDiscoveredTopicToQueue(
   return mapTopic(response.topic)
 }
 
+export async function deleteDiscoveredTopic(
+  apiClient: ApiClient,
+  workspaceId: string,
+  discoveredTopicId: string,
+): Promise<void> {
+  await apiClient.request<void>(
+    `/api/v1/workspaces/${workspaceId}/discovered-topics/${discoveredTopicId}`,
+    { method: "DELETE" },
+  )
+}
+
 function mapDiscoveryRun(dto: DiscoveryRunDto): DiscoveryRun {
   return {
     id: dto.id,

@@ -266,25 +266,25 @@ export default function Overview({
       label: "Tổng nghiên cứu",
       value: topics.length,
       tone: "blue",
-      delta: "+3 tuần này",
+      delta: `${pending.length} đang chờ`,
     },
     {
       label: "Đang chạy",
       value: processing.length,
       tone: "orange",
-      delta: "1 cần theo dõi",
+      delta: processing.length > 0 ? `${processing.length} cần theo dõi` : "Không có job đang chạy",
     },
     {
       label: "Hoàn thành",
-      value: completed.length,
+      value: briefs.length,
       tone: "green",
-      delta: `${briefs.length} brief đã tạo`,
+      delta: "brief đã tạo",
     },
     {
       label: "Thất bại",
       value: failed.length,
       tone: "red",
-      delta: `${pendingBriefs.length} brief chờ duyệt`,
+      delta: failed.length > 0 ? `${failed.length} cần xử lý` : `${pendingBriefs.length} brief chờ duyệt`,
     },
   ]
 
@@ -318,7 +318,11 @@ export default function Overview({
               <strong className={s.statValue}>{st.value}</strong>
               <div
                 className={`${s.statDelta} ${
-                  st.tone === "red" ? s.redText : s.greenText
+                  st.tone === "red"
+                    ? s.redText
+                    : st.tone === "orange"
+                      ? s.orangeText
+                      : s.greenText
                 }`}
               >
                 {st.delta}

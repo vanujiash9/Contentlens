@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from supabase import Client
 
 from app.api.dependencies import get_current_user, get_openai_client
@@ -95,12 +95,9 @@ async def delete_topic(
     workspace_id: UUID,
     topic_id: UUID,
     current_user: AuthenticatedUser = Depends(get_current_user),
+    topic_service: TopicService = Depends(get_topic_service),
 ) -> None:
-    _ = (workspace_id, topic_id, current_user)
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Topic deletion is defined in the contract and will be implemented next.",
-    )
+    topic_service.delete_topic(workspace_id, topic_id, current_user.user_id)
 
 
 @router.post("/{topic_id}/start", response_model=ApiResponse[TopicSummary])

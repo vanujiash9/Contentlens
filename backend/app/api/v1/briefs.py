@@ -52,6 +52,16 @@ async def get_brief(
     return ApiResponse(data=brief_service.get_brief(workspace_id, current_user.user_id, brief_id))
 
 
+@router.delete("/{brief_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_brief(
+    workspace_id: UUID,
+    brief_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    brief_service: BriefService = Depends(get_brief_service),
+) -> None:
+    brief_service.delete_brief(workspace_id, current_user.user_id, brief_id)
+
+
 @router.patch("/{brief_id}/draft", response_model=ApiResponse[BriefSummary])
 async def save_brief_draft(
     workspace_id: UUID,

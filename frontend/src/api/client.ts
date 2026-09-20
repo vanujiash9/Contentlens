@@ -2,6 +2,7 @@ import { ApiError } from "./errors"
 
 interface ApiEnvelope<T> {
   data?: T
+  detail?: string | { code?: string; message?: string }
   error?: {
     code?: string
     message?: string
@@ -47,8 +48,11 @@ export class ApiClient {
     const body = (await response.json().catch(() => null)) as ApiEnvelope<T> | null
 
     if (!response.ok) {
-      const message = body?.error?.message ?? body?.error?.code ?? response.statusText
-      throw new ApiError(message, response.status, body?.error?.code)
+      const detail = body?.detail
+      const detailMessage = typeof detail === "string" ? detail : detail?.message
+      const detailCode = typeof detail === "string" ? undefined : detail?.code
+      const message = body?.error?.message ?? detailMessage ?? body?.error?.code ?? detailCode ?? response.statusText
+      throw new ApiError(message, response.status, body?.error?.code ?? detailCode)
     }
 
     if (body !== null && "data" in body) {

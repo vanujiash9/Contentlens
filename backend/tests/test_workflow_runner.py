@@ -4,6 +4,7 @@ from uuid import UUID
 import pytest
 
 from app.ai.provider import AIProviderInvalidResponseError, AIUsage, StructuredGenerationResult
+from app.integrations.search_provider import SearchResult
 from app.schemas.discovery import DiscoveryGeneration
 from app.workflows.core import WorkflowContext, WorkflowError, WorkflowRunner, WorkflowStep
 from app.workflows.topic_discovery import TopicDiscoveryWorkflow, TopicDiscoveryWorkflowInput
@@ -34,8 +35,26 @@ class FailingStep:
         raise ValueError("boom")
 
 
+class StubSearchProvider:
+    def search(self, query: str, limit: int) -> list[SearchResult]:
+        assert limit == 5
+        return [
+            SearchResult(
+                title=f"Top result for {query}",
+                url="https://example.com/piano",
+                snippet="SERP evidence about piano buyer intent and comparison gaps.",
+                rank=1,
+                source="test",
+            )
+        ]
+
+
 class StubStructuredOutputProvider:
-    def __init__(self, generation: DiscoveryGeneration | None = None, should_fail: bool = False) -> None:
+    def __init__(
+        self,
+        generation: DiscoveryGeneration | None = None,
+        should_fail: bool = False,
+    ) -> None:
         self.generation = generation
         self.should_fail = should_fail
         self.output_model = None
@@ -49,7 +68,8 @@ class StubStructuredOutputProvider:
         temperature: float = 0.4,
     ) -> StructuredGenerationResult[DiscoveryGeneration]:
         assert "ContentLens Topic Discovery AI" in system_prompt
-        assert "Generate 2 content opportunity topic ideas" in user_prompt
+        assert "Generate 2 SEO content opportunity topic ideas" in user_prompt
+        assert "SERP evidence about piano buyer intent" in user_prompt
         assert temperature == 0.4
         self.output_model = output_model
         if self.should_fail:
@@ -96,7 +116,7 @@ def test_topic_discovery_workflow_generates_deduped_topics() -> None:
     provider = StubStructuredOutputProvider(
         make_generation("Yamaha U3 buyer guide", "  yamaha   u3 buyer guide ")
     )
-    workflow = TopicDiscoveryWorkflow(provider)
+    workflow = TopicDiscoveryWorkflow(provider, StubSearchProvider())
 
     result = workflow.run(
         run_id=RUN_ID,
@@ -117,7 +137,10 @@ def test_topic_discovery_workflow_generates_deduped_topics() -> None:
 
 
 def test_topic_discovery_workflow_maps_provider_invalid_response() -> None:
-    workflow = TopicDiscoveryWorkflow(StubStructuredOutputProvider(should_fail=True))
+    workflow = TopicDiscoveryWorkflow(
+        StubStructuredOutputProvider(should_fail=True),
+        StubSearchProvider(),
+    )
 
     with pytest.raises(WorkflowError) as exc_info:
         workflow.run(

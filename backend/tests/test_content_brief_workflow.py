@@ -69,7 +69,11 @@ def make_request() -> ContentBriefWorkflowInput:
         search_intent="Mua Yamaha U3 cũ",
         angle="Checklist mua đàn",
         business_goal="Tăng lead tư vấn mua đàn",
-        research_insights="Người mua lo về chất lượng đàn cũ.",
+        research_insights=(
+            '{"opportunity":{"metadata":{"competitor_analysis":[{"source_url":"https://example.com/article-1",'
+            '"intent":"Compare before buying"}],"cross_serp_analysis":{"must_cover_topics":["Warranty"],'
+            '"unanswered_questions":["How to verify serial number?"]}}}}'
+        ),
     )
 
 
@@ -81,6 +85,8 @@ def test_content_brief_workflow_generates_brief() -> None:
 
     assert provider.output_model is ContentBriefGeneration
     assert "Yamaha U3 buyer guide" in provider.user_prompt
+    assert "competitor_analysis" in provider.user_prompt
+    assert "cross_serp_analysis" in provider.user_prompt
     assert result.generation.title == "Hướng dẫn mua Yamaha U3"
     assert result.provider == "test-provider"
     assert result.usage.input_tokens == 10

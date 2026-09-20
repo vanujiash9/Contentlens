@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -8,7 +9,12 @@ from app.repositories.topics import TopicRepository
 from app.repositories.workflow_runs import WorkflowRunRepository
 from app.repositories.workspaces import WorkspaceRepository
 from app.schemas.research import TopicResearchAggregate
-from app.schemas.topics import TopicDetailResponse, TopicListResponse, TopicSummary, TopicWorkflowStatus
+from app.schemas.topics import (
+    TopicDetailResponse,
+    TopicListResponse,
+    TopicSummary,
+    TopicWorkflowStatus,
+)
 from app.services.workspaces import parse_user_id
 from app.workflows.core import WorkflowError
 from app.workflows.research import ResearchWorkflow, ResearchWorkflowInput
@@ -16,6 +22,7 @@ from app.workflows.research import ResearchWorkflow, ResearchWorkflowInput
 MAX_TOPIC_TITLE_LENGTH = 240
 TOPIC_RESEARCH_WORKFLOW_NAME = "topic_research"
 TOPIC_SUBJECT_TYPE = "topic"
+logger = logging.getLogger(__name__)
 
 
 class TopicService:
@@ -85,6 +92,24 @@ class TopicService:
     ) -> TopicSummary:
         return self._run_research(workspace_id, topic_id, current_user_id, allow_retry=True)
 
+    def delete_topic(
+        self,
+        workspace_id: UUID,
+        topic_id: UUID,
+        current_user_id: str,
+    ) -> None:
+        user_id = parse_user_id(current_user_id)
+        self._ensure_workspace_member(user_id, workspace_id)
+        topic = self.topic_repository.get_by_id(workspace_id, topic_id)
+        if topic is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
+        if topic["status"] == "processing":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Topic research is running and cannot be deleted yet",
+            )
+        self.topic_repository.delete_topic(workspace_id, topic_id)
+
     def _run_research(
         self,
         workspace_id: UUID,
@@ -140,6 +165,14 @@ class TopicService:
             )
         except WorkflowError as error:
             error_code, error_message = map_research_workflow_error(error)
+            logger.exception(
+                "Topic research failed: workspace_id=%s topic_id=%s step=%s code=%s cause=%s",
+                workspace_id,
+                topic_id,
+                error.step_name,
+                error_code,
+                type(error.cause).__name__,
+            )
             self.workflow_run_repository.mark_failed(
                 workspace_id=workspace_id,
                 run_id=workflow_run_id,
@@ -152,7 +185,9 @@ class TopicService:
                 detail={"code": error_code, "message": error_message},
             ) from error
 
-        opportunity = self.research_repository.get_opportunity(topic_id) if self.research_repository else None
+        opportunity = (
+            self.research_repository.get_opportunity(topic_id) if self.research_repository else None
+        )
         row = self.topic_repository.mark_completed(
             workspace_id,
             topic_id,
@@ -261,4 +296,12 @@ class TopicService:
 def map_research_workflow_error(error: WorkflowError) -> tuple[str, str]:
     if isinstance(error.cause, SearchProviderNotConfiguredError):
         return "SEARCH_NOT_CONFIGURED", "Search provider is not configured."
-    return "RESEARCH_WORKFLOW_FAILED", "Topic research is temporarily unavailable."
+
+    cause_message = getattr(error.cause, "message", None)
+    if isinstance(cause_message, str) and cause_message.strip():
+        return "RESEARCH_WORKFLOW_FAILED", cause_message.strip()
+
+    return (
+        "RESEARCH_WORKFLOW_FAILED",
+        f"Topic research failed during {error.step_name}: {type(error.cause).__name__}.",
+    )

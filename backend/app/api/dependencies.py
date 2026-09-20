@@ -9,6 +9,7 @@ from app.core.config import Settings, get_settings
 from app.core.security import AuthenticatedUser, verify_supabase_token
 from app.core.supabase import get_supabase_client
 from app.integrations.openai_client import OpenAIClient
+from app.integrations.search_provider import get_search_provider
 from app.repositories.briefs import BriefRepository
 from app.repositories.discovery import DiscoveryRepository
 from app.repositories.research import ResearchRepository
@@ -52,8 +53,9 @@ def get_topic_discovery_generator(
 
 def get_topic_discovery_workflow(
     client: OpenAIClient = Depends(get_openai_client),
+    settings: Settings = Depends(get_settings),
 ) -> TopicDiscoveryWorkflow:
-    return TopicDiscoveryWorkflow(client)
+    return TopicDiscoveryWorkflow(client, get_search_provider(settings))
 
 
 def get_content_brief_workflow(

@@ -161,3 +161,12 @@ class BriefRepository:
             .execute()
         )
         return response.data[0]
+
+    def delete_brief(self, *, workspace_id: UUID, brief_id: UUID) -> None:
+        (
+            self.supabase.table("content_briefs")
+            .delete()
+            .eq("workspace_id", str(workspace_id))
+            .eq("id", str(brief_id))
+            .execute()
+        )

@@ -117,3 +117,12 @@ class TopicRepository:
             .execute()
         )
         return response.data[0]
+
+    def delete_topic(self, workspace_id: UUID, topic_id: UUID) -> None:
+        (
+            self.supabase.table("topics")
+            .delete()
+            .eq("workspace_id", str(workspace_id))
+            .eq("id", str(topic_id))
+            .execute()
+        )
