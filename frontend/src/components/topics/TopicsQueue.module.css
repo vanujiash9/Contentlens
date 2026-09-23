@@ -178,6 +178,7 @@
   text-transform: uppercase;
 }
 
+.refreshNotice,
 .researchNotice,
 .researchError {
   margin-bottom: 12px;
@@ -187,6 +188,7 @@
   font-weight: 700;
 }
 
+.refreshNotice,
 .researchNotice {
   background: var(--primary-soft);
   color: var(--primary);

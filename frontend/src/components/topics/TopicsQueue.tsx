@@ -291,6 +291,7 @@ export default function TopicsQueue({
     >
       <div className={s.flowHint}>Workflow: Bắt đầu nghiên cứu → Research Result → Tạo Content Brief</div>
       {isLoading && allTopics.length === 0 ? <div className={s.emptyState}>Đang tải chủ đề...</div> : null}
+      {isLoading && allTopics.length > 0 ? <div className={s.refreshNotice}>Đang cập nhật hàng đợi...</div> : null}
       {error ? <div className={s.emptyState}>{error}</div> : null}
       {actionError ? <div className={s.emptyState}>{actionError}</div> : null}
       {actionMessage ? <div className={s.emptyState}>{actionMessage}</div> : null}

@@ -142,7 +142,7 @@ export default function App() {
     )
 
     let isActive = true
-    setIsDataLoading(true)
+    setIsDataLoading(topics.length === 0 && briefs.length === 0)
     setDataError(null)
 
     Promise.all([listTopics(apiClient, workspaceId), listBriefs(apiClient, workspaceId)])
