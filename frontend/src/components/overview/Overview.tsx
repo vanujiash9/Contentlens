@@ -1,5 +1,4 @@
 import PageShell from "../ui/PageShell"
-import { MOCK_ACTIVITY } from "../../data/mockData"
 import type { BriefSummary } from "../../api/briefs"
 import type { Topic } from "../../types/domain"
 import { useIsMobile } from "../../hooks/useIsMobile"
@@ -36,13 +35,21 @@ function DotStatus({ status }: { status: string }) {
   )
 }
 
-const ACTIVITY_LABELS: Record<string, { label: string; className: string }> = {
+type ActivityType = "research_done" | "topic_added" | "brief_created" | "research_failed" | "research_started"
+
+interface RecentActivity {
+  id: string
+  type: ActivityType
+  topicTitle: string
+  updatedAt: string
+}
+
+const ACTIVITY_LABELS: Record<ActivityType, { label: string; className: string }> = {
   research_done: { label: "Hoàn thành nghiên cứu", className: s.green },
   topic_added: { label: "Tạo chủ đề mới", className: s.gray },
-  brief_created: { label: "Cập nhật nội dung", className: s.gray },
+  brief_created: { label: "Tạo Content Brief", className: s.gray },
   research_failed: { label: "Nghiên cứu thất bại", className: s.red },
   research_started: { label: "Đang chạy nghiên cứu", className: s.orange },
-  ai_discovery: { label: "AI khám phá chủ đề", className: s.gray },
 }
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
@@ -185,6 +192,45 @@ function QualityChart() {
   )
 }
 
+function buildRecentActivity(topics: Topic[], briefs: BriefSummary[]): RecentActivity[] {
+  return [
+    ...topics.map(activityFromTopic),
+    ...briefs.map(activityFromBrief),
+  ]
+    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
+    .slice(0, 5)
+}
+
+function activityFromTopic(topic: Topic): RecentActivity {
+  const typeByStatus: Record<Topic["status"], ActivityType> = {
+    pending: "topic_added",
+    processing: "research_started",
+    completed: "research_done",
+    failed: "research_failed",
+  }
+
+  return {
+    id: `topic-${topic.id}`,
+    type: typeByStatus[topic.status],
+    topicTitle: topic.title,
+    updatedAt: topic.updatedAt,
+  }
+}
+
+function activityFromBrief(brief: BriefSummary): RecentActivity {
+  return {
+    id: `brief-${brief.id}`,
+    type: "brief_created",
+    topicTitle: brief.title,
+    updatedAt: brief.updatedAt,
+  }
+}
+
+function formatActivityTime(iso: string): string {
+  const date = new Date(iso)
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
+}
+
 function StatusDonut({
   pending,
   processing,
@@ -261,6 +307,7 @@ export default function Overview({
       updatedAt: brief.updatedAt,
       type: "article",
     }))
+  const recentActivity = buildRecentActivity(topics, briefs)
   const stats = [
     {
       label: "Tổng nghiên cứu",
@@ -438,25 +485,26 @@ export default function Overview({
           <button>Xem tất cả →</button>
         </div>
         <div className={s.activityTimeline}>
-          {MOCK_ACTIVITY.slice(0, 5).map((ev, i) => {
-            const cfg = ACTIVITY_LABELS[ev.type] ?? {
-              label: "Sự kiện",
-              className: s.gray,
-            }
-            return (
-              <div className={s.activityRow} key={ev.id}>
-                <div className={s.activityDotCol}>
-                  <i className={cfg.className} />
-                  {i < 4 && <span />}
+          {recentActivity.length === 0 ? (
+            <div className={s.activityEmpty}>Chưa có hoạt động nào.</div>
+          ) : (
+            recentActivity.map((event, index) => {
+              const cfg = ACTIVITY_LABELS[event.type]
+              return (
+                <div className={s.activityRow} key={event.id}>
+                  <div className={s.activityDotCol}>
+                    <i className={cfg.className} />
+                    {index < recentActivity.length - 1 && <span />}
+                  </div>
+                  <div className={s.activityText}>
+                    <strong>{cfg.label}</strong>
+                    <small>{event.topicTitle}</small>
+                  </div>
+                  <time>{formatActivityTime(event.updatedAt)}</time>
                 </div>
-                <div className={s.activityText}>
-                  <strong>{cfg.label}</strong>
-                  <small>{ev.topicTitle}</small>
-                </div>
-                <time>{ev.time}</time>
-              </div>
-            )
-          })}
+              )
+            })
+          )}
         </div>
       </section>
     </PageShell>

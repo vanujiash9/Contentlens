@@ -193,43 +193,66 @@ function RenderMd({ text }: { text: string }) {
   const lines = text.split("\n")
   let key = 0
   const inline = (line: string) =>
-    line.split(/(\*\*[^*]+\*\*|\[\d+\])/g).map((p, i) => {
-      if (/^\*\*[^*]+\*\*$/.test(p))
-        return (
-          <strong key={i} style={{ fontWeight: 600, color: "#111827" }}>
-            {p.slice(2, -2)}
-          </strong>
-        )
-      if (/^\[\d+\]$/.test(p))
-        return (
-          <sup
-            key={i}
-            style={{
-              fontSize: 9,
-              fontWeight: 700,
-              color: "#2563eb",
-              marginLeft: 1,
-              fontFamily: "JetBrains Mono, monospace",
-            }}
-          >
-            {p}
-          </sup>
-        )
-      return p
+    line.split(/(\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_|\[\d+\])/g).map((part, index) => {
+      if (/^\*\*[^*]+\*\*$/.test(part)) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>
+      }
+
+      if (/^\*[^*]+\*$/.test(part) || /^_[^_]+_$/.test(part)) {
+        return <em key={index}>{part.slice(1, -1)}</em>
+      }
+
+      if (/^\[\d+\]$/.test(part)) {
+        return <sup key={index}>{part}</sup>
+      }
+
+      return part
     })
-  return (
-    <div className={s.reader}>
-      {lines.map((line) => {
-        if (line.startsWith("# ")) return <h1 key={key++}>{line.slice(2)}</h1>
-        if (line.startsWith("## ")) return <h2 key={key++}>{line.slice(3)}</h2>
-        if (line.startsWith("---")) return <hr key={key++} />
-        if (line.startsWith("> "))
-          return <blockquote key={key++}>{inline(line.slice(2))}</blockquote>
-        if (line.trim() === "") return <div key={key++} style={{ height: 6 }} />
-        return <p key={key++}>{inline(line)}</p>
-      })}
-    </div>
-  )
+
+  const blocks = []
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    const unorderedMatch = line.match(/^\s*[-*]\s+(.+)$/)
+    const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/)
+
+    if (line.startsWith("# ")) {
+      blocks.push(<h1 key={key++}>{inline(line.slice(2))}</h1>)
+    } else if (line.startsWith("## ")) {
+      blocks.push(<h2 key={key++}>{inline(line.slice(3))}</h2>)
+    } else if (line.startsWith("### ")) {
+      blocks.push(<h3 key={key++}>{inline(line.slice(4))}</h3>)
+    } else if (line.startsWith("---")) {
+      blocks.push(<hr key={key++} />)
+    } else if (line.startsWith("> ")) {
+      blocks.push(<blockquote key={key++}>{inline(line.slice(2))}</blockquote>)
+    } else if (unorderedMatch) {
+      const items = []
+      while (index < lines.length) {
+        const itemMatch = lines[index].match(/^\s*[-*]\s+(.+)$/)
+        if (!itemMatch) break
+        items.push(<li key={key++}>{inline(itemMatch[1])}</li>)
+        index += 1
+      }
+      index -= 1
+      blocks.push(<ul key={key++}>{items}</ul>)
+    } else if (orderedMatch) {
+      const items = []
+      while (index < lines.length) {
+        const itemMatch = lines[index].match(/^\s*\d+\.\s+(.+)$/)
+        if (!itemMatch) break
+        items.push(<li key={key++}>{inline(itemMatch[1])}</li>)
+        index += 1
+      }
+      index -= 1
+      blocks.push(<ol key={key++}>{items}</ol>)
+    } else if (line.trim() === "") {
+      blocks.push(<div key={key++} style={{ height: 6 }} />)
+    } else {
+      blocks.push(<p key={key++}>{inline(line)}</p>)
+    }
+  }
+
+  return <div className={s.reader}>{blocks}</div>
 }
 
 function BriefViewer({

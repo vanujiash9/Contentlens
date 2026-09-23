@@ -66,6 +66,8 @@ const STATUS_CLASSES: Record<Topic["status"], string> = {
   failed: s.statusFailed,
 }
 
+const RESEARCH_RUNNING_STEP = "Đang tìm kiếm và đọc nguồn cạnh tranh"
+
 function StatusBadge({ status }: { status: Topic["status"] }) {
   return <span className={`${s.statusBadge} ${STATUS_CLASSES[status]}`}>{STATUS_LABELS[status]}</span>
 }
@@ -130,7 +132,7 @@ export default function TopicsQueue({
 
     setSelectedResearchTopicId(topic.id)
     setResearchResultError(null)
-    if (researchByTopicId[topic.id]) {
+    if (researchByTopicId[topic.id] || loadingResearchTopicIds.has(topic.id)) {
       return
     }
 
@@ -163,13 +165,16 @@ export default function TopicsQueue({
     setActionError(null)
     setActionMessage(null)
     setResearchingTopicIds((current) => new Set([...current, topic.id]))
+    onTopicChange?.(markTopicResearching(topic))
     try {
       const nextTopic = await startTopic(apiClient, workspaceId, topic.id)
       onTopicChange?.(nextTopic)
       setActionMessage("Đã nghiên cứu xong. Xem Research Result trước khi tạo brief.")
       await loadResearchResult(nextTopic)
     } catch (researchError: unknown) {
-      setActionError(getErrorMessage(researchError))
+      const message = getErrorMessage(researchError)
+      onTopicChange?.(markTopicFailed(topic, message))
+      setActionError(message)
     } finally {
       setResearchingTopicIds((current) => {
         const next = new Set(current)
@@ -187,6 +192,7 @@ export default function TopicsQueue({
     setActionError(null)
     setActionMessage(null)
     setResearchingTopicIds((current) => new Set([...current, topic.id]))
+    onTopicChange?.(markTopicResearching(topic))
     try {
       const nextTopic = await retryTopic(apiClient, workspaceId, topic.id)
       onTopicChange?.(nextTopic)
@@ -198,7 +204,9 @@ export default function TopicsQueue({
       })
       await loadResearchResult(nextTopic)
     } catch (researchError: unknown) {
-      setActionError(getErrorMessage(researchError))
+      const message = getErrorMessage(researchError)
+      onTopicChange?.(markTopicFailed(topic, message))
+      setActionError(message)
     } finally {
       setResearchingTopicIds((current) => {
         const next = new Set(current)
@@ -558,6 +566,23 @@ function InsightList({ items, emptyText }: { items: string[]; emptyText: string 
 
 function EmptyResearchText({ text }: { text: string }) {
   return <p className={s.researchEmptyText}>{text}</p>
+}
+
+function markTopicResearching(topic: Topic): Topic {
+  return {
+    ...topic,
+    status: "processing",
+    researchProgress: Math.max(topic.researchProgress ?? 0, 10),
+    currentStep: topic.currentStep ?? RESEARCH_RUNNING_STEP,
+  }
+}
+
+function markTopicFailed(topic: Topic, message: string): Topic {
+  return {
+    ...topic,
+    status: "failed",
+    currentStep: message,
+  }
 }
 
 function pendingCount(topics: Topic[]) {
