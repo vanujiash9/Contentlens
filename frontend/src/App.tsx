@@ -36,6 +36,7 @@ const ACTIVITY_LABELS: Record<ActivityType, { label: string; className: string }
   research_failed: { label: "Nghiên cứu thất bại", className: s.activityDanger },
   research_started: { label: "Đang chạy nghiên cứu", className: s.activityWarning },
 }
+const NOTIFICATION_SEEN_KEY = "contentlens:last-seen-activity-at"
 
 function buildRecentActivity(topics: Topic[], briefs: BriefSummary[]): RecentActivity[] {
   return [...topics.map(activityFromTopic), ...briefs.map(activityFromBrief)]
@@ -83,9 +84,33 @@ function TopBar({
   onLogout: () => void
 }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [lastSeenActivityAt, setLastSeenActivityAt] = useState(() =>
+    window.localStorage.getItem(NOTIFICATION_SEEN_KEY) ?? "",
+  )
+  const latestActivityAt = activities[0]?.updatedAt ?? ""
+  const unreadCount = activities.filter((activity) => {
+    if (!lastSeenActivityAt) {
+      return true
+    }
+    return +new Date(activity.updatedAt) > +new Date(lastSeenActivityAt)
+  }).length
+
+  const markNotificationsSeen = () => {
+    if (!latestActivityAt) {
+      return
+    }
+    window.localStorage.setItem(NOTIFICATION_SEEN_KEY, latestActivityAt)
+    setLastSeenActivityAt(latestActivityAt)
+  }
+
+  const handleToggleNotifications = () => {
+    setIsNotificationsOpen((value) => !value)
+    markNotificationsSeen()
+  }
 
   const handleActivityNavigate = () => {
     setIsNotificationsOpen(false)
+    markNotificationsSeen()
     onNavigate("topics")
   }
 
@@ -96,9 +121,9 @@ function TopBar({
           className={s.iconButton}
           aria-label="Thông báo"
           type="button"
-          onClick={() => setIsNotificationsOpen((value) => !value)}
+          onClick={handleToggleNotifications}
         >
-          {activities.length > 0 ? <span className={s.notificationBadge}>{activities.length}</span> : null}
+          {unreadCount > 0 ? <span className={s.notificationBadge}>{unreadCount}</span> : null}
           <svg
             width="18"
             height="18"
