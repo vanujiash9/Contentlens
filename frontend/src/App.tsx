@@ -20,31 +20,135 @@ import type { DiscoveryRun } from "./api/discovery"
 import type { Topic } from "./types/domain"
 type View = "overview" | "topics" | "briefs" | "add-topics" | "discovery" | `topic-${string}`
 
-function TopBar({ onLogout }: { onLogout: () => void }) {
+type ActivityType = "research_done" | "topic_added" | "brief_created" | "research_failed" | "research_started"
+
+interface RecentActivity {
+  id: string
+  type: ActivityType
+  topicTitle: string
+  updatedAt: string
+}
+
+const ACTIVITY_LABELS: Record<ActivityType, { label: string; className: string }> = {
+  research_done: { label: "Hoàn thành nghiên cứu", className: s.activitySuccess },
+  topic_added: { label: "Tạo chủ đề mới", className: s.activityNeutral },
+  brief_created: { label: "Tạo Content Brief", className: s.activityNeutral },
+  research_failed: { label: "Nghiên cứu thất bại", className: s.activityDanger },
+  research_started: { label: "Đang chạy nghiên cứu", className: s.activityWarning },
+}
+
+function buildRecentActivity(topics: Topic[], briefs: BriefSummary[]): RecentActivity[] {
+  return [...topics.map(activityFromTopic), ...briefs.map(activityFromBrief)]
+    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
+    .slice(0, 5)
+}
+
+function activityFromTopic(topic: Topic): RecentActivity {
+  const typeByStatus: Record<Topic["status"], ActivityType> = {
+    pending: "topic_added",
+    processing: "research_started",
+    completed: "research_done",
+    failed: "research_failed",
+  }
+
+  return {
+    id: `topic-${topic.id}`,
+    type: typeByStatus[topic.status],
+    topicTitle: topic.title,
+    updatedAt: topic.updatedAt,
+  }
+}
+
+function activityFromBrief(brief: BriefSummary): RecentActivity {
+  return {
+    id: `brief-${brief.id}`,
+    type: "brief_created",
+    topicTitle: brief.title,
+    updatedAt: brief.updatedAt,
+  }
+}
+
+function formatActivityTime(iso: string): string {
+  const date = new Date(iso)
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
+}
+
+function TopBar({
+  activities,
+  onNavigate,
+  onLogout,
+}: {
+  activities: RecentActivity[]
+  onNavigate: (view: string) => void
+  onLogout: () => void
+}) {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+
+  const handleActivityNavigate = () => {
+    setIsNotificationsOpen(false)
+    onNavigate("topics")
+  }
+
   return (
     <div className={s.topBar}>
-      <button className={s.iconButton} aria-label="Thông báo" type="button">
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 18 18"
-          fill="none"
-          aria-hidden="true"
+      <div className={s.notificationWrap}>
+        <button
+          className={s.iconButton}
+          aria-label="Thông báo"
+          type="button"
+          onClick={() => setIsNotificationsOpen((value) => !value)}
         >
-          <path
-            d="M9 2A5 5 0 004 7v4l-1.5 2h13L14 11V7A5 5 0 009 2z"
-            stroke="currentColor"
-            strokeWidth="1.35"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M7.5 13.5a1.5 1.5 0 003 0"
-            stroke="currentColor"
-            strokeWidth="1.35"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+          {activities.length > 0 ? <span className={s.notificationBadge}>{activities.length}</span> : null}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M9 2A5 5 0 004 7v4l-1.5 2h13L14 11V7A5 5 0 009 2z"
+              stroke="currentColor"
+              strokeWidth="1.35"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M7.5 13.5a1.5 1.5 0 003 0"
+              stroke="currentColor"
+              strokeWidth="1.35"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+
+        {isNotificationsOpen ? (
+          <div className={s.notificationPanel}>
+            <div className={s.notificationHeader}>Hoạt động gần đây</div>
+            {activities.length === 0 ? (
+              <div className={s.notificationEmpty}>Chưa có hoạt động nào.</div>
+            ) : (
+              <div className={s.notificationList}>
+                {activities.map((activity) => {
+                  const cfg = ACTIVITY_LABELS[activity.type]
+                  return (
+                    <div className={s.notificationItem} key={activity.id}>
+                      <span className={`${s.activityDot} ${cfg.className}`} />
+                      <div className={s.notificationText}>
+                        <strong>{cfg.label}</strong>
+                        <span>{activity.topicTitle}</span>
+                      </div>
+                      <time>{formatActivityTime(activity.updatedAt)}</time>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <button className={s.notificationFooter} type="button" onClick={handleActivityNavigate}>
+              Xem hàng đợi →
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       <button
         className={s.accountButton}
@@ -216,6 +320,8 @@ export default function App() {
     setView(v as View)
   }
 
+  const recentActivity = buildRecentActivity(topics, briefs)
+
   const handleLogout = async () => {
     await signOut()
     setView("overview")
@@ -348,6 +454,8 @@ export default function App() {
       <div className={s.mainArea}>
         {!isMobile && (
           <TopBar
+            activities={recentActivity}
+            onNavigate={navigate}
             onLogout={() => {
               void handleLogout()
             }}
