@@ -24,6 +24,7 @@ interface TopicDiscoveryProps {
   onRunChange?: (run: DiscoveryRun | null) => void
 }
 
+const DISCOVERY_HISTORY_LIMIT = 20
 const SIGNAL_COLOR: Record<string, string> = { high: "#16a34a", medium: "#d97706", low: "#9ca3af" }
 const PRIORITY_LABELS = {
   high: "Ưu tiên cao",
@@ -163,7 +164,9 @@ export default function TopicDiscovery({
     }
 
     let isActive = true
-    setIsRunning(true)
+    if (results.length === 0) {
+      setIsRunning(true)
+    }
     setError(null)
 
     const applyRuns = (runs: DiscoveryRun[]) => {
@@ -185,7 +188,7 @@ export default function TopicDiscovery({
     }
 
     const runId = window.localStorage.getItem(getStorageKey(workspaceId))
-    listDiscoveryRuns(apiClient, workspaceId, 50)
+    listDiscoveryRuns(apiClient, workspaceId, DISCOVERY_HISTORY_LIMIT)
       .catch(() => {
         if (runId === null) {
           return []

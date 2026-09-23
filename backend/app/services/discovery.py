@@ -158,17 +158,14 @@ class DiscoveryService:
         user_id = parse_user_id(current_user_id)
         self._ensure_workspace_member(user_id, workspace_id)
         runs = self.discovery_repository.list_runs(workspace_id, limit)
+        run_ids = [UUID(str(run["id"])) for run in runs]
+        topics_by_run_id: dict[str, list[dict]] = {str(run_id): [] for run_id in run_ids}
+        for topic in self.discovery_repository.list_topics_for_runs(workspace_id, run_ids):
+            run_id = str(topic["discovery_run_id"])
+            topics_by_run_id.setdefault(run_id, []).append(topic)
+
         return DiscoveryRunListResponse(
-            runs=[
-                self._map_run(
-                    run,
-                    self.discovery_repository.list_topics_for_run(
-                        workspace_id,
-                        UUID(str(run["id"])),
-                    ),
-                )
-                for run in runs
-            ]
+            runs=[self._map_run(run, topics_by_run_id.get(str(run["id"]), [])) for run in runs]
         )
 
     def get_latest_discovery_run(

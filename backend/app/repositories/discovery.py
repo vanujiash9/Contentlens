@@ -10,8 +10,8 @@ DISCOVERY_RUN_SELECT = (
     "error_message, created_at, completed_at"
 )
 DISCOVERED_TOPIC_SELECT = (
-    "id, title, opportunity_score, priority, search_signals, content_gap, business_relevance, "
-    "angle, reasoning, added_to_queue_at, topic_id, created_at"
+    "id, discovery_run_id, title, opportunity_score, priority, search_signals, content_gap, "
+    "business_relevance, angle, reasoning, added_to_queue_at, topic_id, created_at"
 )
 
 
@@ -79,6 +79,20 @@ class DiscoveryRepository:
             .select(DISCOVERED_TOPIC_SELECT)
             .eq("workspace_id", str(workspace_id))
             .eq("discovery_run_id", str(run_id))
+            .order("rank", desc=False)
+            .execute()
+        )
+        return list(response.data or [])
+
+    def list_topics_for_runs(self, workspace_id: UUID, run_ids: list[UUID]) -> list[dict]:
+        if not run_ids:
+            return []
+
+        response = (
+            self.supabase.table("discovered_topics")
+            .select(DISCOVERED_TOPIC_SELECT)
+            .eq("workspace_id", str(workspace_id))
+            .in_("discovery_run_id", [str(run_id) for run_id in run_ids])
             .order("rank", desc=False)
             .execute()
         )
