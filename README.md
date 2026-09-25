@@ -217,7 +217,7 @@ ContentLens is evaluated using observable workflow metrics that reflect response
 | Competitors analyzed in representative case | **5** |
 | Content gaps extracted in representative case | **10** |
 | Topic scoring scale | **0–100** |
-| Visible opportunity-score range in current demo queue | **75–88 / 100** |
+| Visible opportunity-score range in current demo queue | **79–95 / 100** |
 | Repeated topic discovery | **Supported** |
 | Human review before final use | **Required** |
 | Automatic publishing | **No** |
